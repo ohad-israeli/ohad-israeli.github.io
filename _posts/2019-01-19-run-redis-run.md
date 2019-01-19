@@ -138,7 +138,7 @@ function doQuery(req, res, next) {
         }
         else {
             console.log('No luck, get the data from DB');
-            //mesure time against MySQL
+            //measure time against MySQL
             console.time('DBQuery');
             db.query(query, (err, result) => {
                 if (err) {
@@ -146,7 +146,7 @@ function doQuery(req, res, next) {
                 }
                 let data = JSON.stringify(result);
                 res.send(data);
-                //end mesure time of query against MySQL
+                //end measure time of query against MySQL
                 console.timeEnd('DBQuery');
                 client.set(key, data, redis.print);
             });
