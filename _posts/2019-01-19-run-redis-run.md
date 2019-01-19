@@ -7,7 +7,6 @@ tags:
   - redis
 toc: true
 ---
-## classes: wide
 In my first post, I have explained a little about what is Redis, and what are the common use cases for using it. In this post, we will bake a simple cache solution using Redis.
 
 
