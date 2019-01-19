@@ -12,13 +12,10 @@ In my first post, I have explained a little about what is Redis, and what are th
 
 ## The Recipe
 
-MySQL database - in our scenario will play the role of the primary database.
-
-Redis - which will be our blazing fast cache
-
-Backend server - which will handle clients requests and, fetch the data needed from the Redis and MySQL in case the data is not in Redis. 
-
-Client - will display the data which will be retrieved from the backend server.
+* MySQL database - in our scenario will play the role of the primary database.
+* Redis - which will be our blazing fast cache
+* Backend server - which will handle clients requests and, fetch the data needed from the Redis and MySQL in case the data is not in Redis. 
+* Client - will display the data which will be retrieved from the backend server.
 
 ## Preparing the ingredients
 
