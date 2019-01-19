@@ -1,6 +1,6 @@
 ---
 title: "Run Redis Run"
-excerpt: "Caching MySQL with Redis"
+excerpt: "Cache your MySQL database with Redis. A full example including MySQL+Redis+NodeJS+React"
 header:
   teaser: "/assets/images/cache-diagram.png"
 tags: 

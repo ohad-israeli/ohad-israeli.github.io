@@ -1,6 +1,6 @@
 ---
 title: "Redis - The Beginning"
-excerpt: "Redis, what is it and when it can be used"
+excerpt: "Understand what is Redis, and what our people using it for"
 header:
   teaser: "/assets/images/redis-logo.png"
 tags: 
