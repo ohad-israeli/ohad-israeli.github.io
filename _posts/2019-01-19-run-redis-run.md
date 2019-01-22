@@ -7,7 +7,7 @@ tags:
   - redis
 toc: true
 ---
-In my first post, I have explained a little about what is Redis, and what are the common use cases for using it. In this post, we will bake a simple cache solution using Redis.
+In my first [post](https://ohad-israeli.github.io/redis-the-beginning/), I have explained a little about what is Redis, and what are the common use cases for using it. In this post, we will bake a simple cache solution using Redis.
 
 
 ## The Recipe
@@ -16,6 +16,10 @@ In my first post, I have explained a little about what is Redis, and what are th
 * Redis - which will be our blazing fast cache
 * Backend server - which will handle clients requests and, fetch the data needed from the Redis and MySQL in case the data is not in Redis. 
 * Client - will display the data which will be retrieved from the backend server.
+
+<figure>
+    <a href="/assets/images/cache-diagram.png"><img src="/assets/images/cache-diagram.png"></a>
+</figure>
 
 ## Preparing the ingredients
 

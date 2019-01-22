@@ -50,5 +50,5 @@ In Redis this is dead simple just use a SortedSet and you are done, simple as th
 
 You can do a lot more cool stuff with Redis, such as job management by using in-memory queues, messaging, analytics, Geo searches and more.
 
-Now that we understand what is Redis all about, in the next post I will show you how to start baking using Redis as to cache user queries.
+Now that we understand what is Redis all about, in the next [post](https://ohad-israeli.github.io/run-redis-run//) I will show you how to start baking using Redis as to cache user queries.
 
