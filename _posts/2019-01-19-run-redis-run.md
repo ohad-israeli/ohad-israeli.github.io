@@ -283,6 +283,10 @@ export default EmpList
 You can check out the repo [here](https://github.com/ohad-israeli/querycacheclient)
 Now we can finally test all the pieces together.
 
+<figure>
+    <a href="/assets/images/cache-client.png"><img src="/assets/images/cache-client.png"></a>
+</figure>
+
 I leave it to you guys to see the results of queries that are cached compared to ones that are not.
 
 
