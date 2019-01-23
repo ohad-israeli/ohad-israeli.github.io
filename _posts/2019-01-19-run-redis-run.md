@@ -12,10 +12,10 @@ In my first [post](https://ohad-israeli.github.io/redis-the-beginning/), I have 
 
 ## The Recipe
 
-* MySQL database - in our scenario will play the role of the primary database.
-* Redis - which will be our blazing fast cache
-* Backend server - which will handle clients requests and, fetch the data needed from the Redis and MySQL in case the data is not in Redis. 
-* Client - will display the data which will be retrieved from the backend server.
+* MySQL database - in our scenario, it will play the role of the primary database.
+* Redis - will take the role of our blazing fast cache
+* Backend server - will handle clients requests and, fetch the data needed from Redis and MySQL in case the data is not in Redis. 
+* Client - display the data retrieved from the backend server.
 
 <figure>
     <a href="/assets/images/cache-diagram.png"><img src="/assets/images/cache-diagram.png"></a>
@@ -23,24 +23,23 @@ In my first [post](https://ohad-israeli.github.io/redis-the-beginning/), I have 
 
 ## Preparing the ingredients
 
-To make things sweet and simple I will use docker to help me in setting up all the ingredients.
+To make things sweet and simple I will use Docker to help me in setting up all the ingredients.
 
-The first Docker container will be our database, in this case, I will use MySQL. To get things running on my mac, I did the following:
+The first Docker container will be our database, in this case, I will use MySQL. To get things running on my mac, I have done the following:
 
 ```bash
 $docker run -p 3306:3306 -d --name mysql -e MYSQL_ROOT_PASSWORD=password mysql/mysql-server
 ```
 
-Since I want access to the database, outside of the container I had to the following steps:
+To enable access to the database, outside of the container I had to the following steps:
 
-Login into to MySQL, within the docker container, and then login using the password that we have supplied in our case it was password.
+Login into to MySQL, within the docker container, using the password in the previous step in our case it was password.
 
 ```bash
 $docker exec -it mysql bash
 bash-4.2# mysql -uroot -ppassword
 ```
-Then to enable access from outside the container we need to create a user and grant him privileges. (use % instead of localhost)
-
+Next we need to create a user and grant him privileges. (use % instead of localhost)
 
 ```sql
 mysql> CREATE USER 'geek'@'%' IDENTIFIED WITH mysql_native_password BY 'password';
@@ -50,8 +49,7 @@ mysql> GRANT ALL PRIVILEGES on * . * to 'geek'@'%';
 Query OK, 0 rows affected (0.00 sec)
 ```
 
-Then finally we can access MySQL from outside the container and load some data to it using this repo. We can also now connect with Workbench to our newly created database.
-
+Then finally we can access MySQL from outside the container and load some data to it using this [repo](https://github.com/datacharmer/test_db). We can also now connect with [Workbench](https://www.mysql.com/products/workbench/) to our newly created database.
 
 In order to spin up a Redis container on localhost, just run:
 
@@ -65,16 +63,17 @@ You can find some more info here about running Redis as a docker container.
 
 Now that we have our database all set and ready with some data we can query, let's bake the server.
 
-
 Create the server working folder and initialize our node backend project
 
 ```bash
 $mkdir QueryCacheServer
 $npm -init -y
 ```
-We will use Express framework, and install the Redis and MySQL clients as dependencies. We will also install sha1 for hashing the queries as our keys to Redis.
+We will use Express framework, and install Redis and MySQL clients as dependencies. We will also install sha1 for hashing the queries as our keys to Redis.
 
+```bash
 $npm install express redis mysql sha1
+```
 ***Tip:*** if you are using npm 5, you do not to specify -S or --save flag to save as a dependency in your package.json file.
 
 
@@ -171,11 +170,11 @@ app.listen(port, () => {
 });
 ```
 
-As you can see in the code, we can test it with our browser at localhost:5000/query. 
+For those who have payed attention can easily see that we can test our server with our browser at localhost:5000/query. 
 
-We need to pass a query parameter for the name to search. If you will try it you can see that in the first time it, of course, needs to load the data from the DB on the second try it will get it from Redis.
+To run the query we also need to pass a query parameter for the name to search. If you will try and test the server then we will see that in the first time it will, of course, load the data from the DB and on the second try it will get it from Redis.
 
-Here are the results I got
+If you will give at try, you should see something similar to the following
 
 ```
 Connected to redis
@@ -189,7 +188,8 @@ Start Query
 Feeling lucky, key found in Redis
 CacheQuery: 0.103ms
 ```
-Quite impressive don't you think 😃
+Quite impressive don't you think 😃 we have boosted things up
+
 You can check out the repo [here](https://github.com/ohad-israeli/querycacheserver)
 
 ## The Client
@@ -222,9 +222,7 @@ export default App;
 
 Next up is EmpList.js, the code is also relatively simple as well. The render method is built in two parts: 
 
-The header which includes our search input, and a search button. The second part, we render the employees list, and each item in the list will consist of the full name only.
-
-
+The header which includes our search input, and a search button. The second part, renders the employees list, and each item in the list will consist of the full name of the employee.
 
 ```javascript
 import React, { Component } from 'react';
@@ -290,4 +288,4 @@ Now we can finally test all the pieces together.
 I leave it to you guys to see the results of queries that are cached compared to ones that are not.
 
 
-Hope you like this recipe, waiting to hear from you on this or on any other subject.
+Hope you like this recipe, will be back as soon as I have a new recipe ready.
