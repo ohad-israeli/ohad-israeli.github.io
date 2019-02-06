@@ -69,10 +69,10 @@ Create the server working folder and initialize our node backend project
 $mkdir QueryCacheServer
 $npm -init -y
 ```
-We will use Express framework, and install Redis and MySQL clients as dependencies. We will also install sha1 for hashing the queries as our keys to Redis.
+We will use Express framework, and install Redis and MySQL clients as dependencies.
 
 ```bash
-$npm install express redis mysql sha1
+$npm install express redis mysql
 ```
 ***Tip:*** if you are using npm 5, you do not to specify -S or --save flag to save as a dependency in your package.json file.
 
