@@ -7,6 +7,11 @@ tags:
 - redis
 toc: true
 ---
+
+<figure>
+    <a href="/assets/images/search.png"><img src="/assets/images/search.png"></a>
+</figure>
+
 One of the common use cases that I have encountered lately is to have search capabilities. This capability seems like a common standard now for all applications and channels that we tackle during our day to day use cases. In this post, I will address the needs and some of the challenges, and show how easy it is to implement blazing fast search capabilities using [RediSearch](http://redisearch.io).
 
 ## The Recipe
@@ -14,12 +19,6 @@ In this post we will create a product catalog, the products will be indexed in R
 * Redis - will take the role of our blazing fast search engine.
 * Search server - which will generate and index random product data, and serve as the backend for the autocomplete and search capabilities.
 * Client - client to query the generated data, with autocomplete capability.
-
-Below is the end result
-
-<figure>
-    <a href="/assets/images/search.png"><img src="/assets/images/search.png"></a>
-</figure>
 
 ## Prolog
 Text search and autocomplete, is around us for quite a while we need it when we are looking for a friend in social media, maps searches, product catalog and many more. There are quite a few known solutions like Lucene and engines that are based on it such as Solr and ElasticCache, in this post I will explore an extension to Redis which offers these capabilities with the performance that you would expect from Redis...
