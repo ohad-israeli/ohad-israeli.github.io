@@ -56,7 +56,7 @@ In order to spin up a Redis container on localhost, just run:
 ```bash
 $docker run --name myredis -p 6379:6379 -d redis redis-server --requirepass password
 ```
-You can find some more info here about running Redis as a docker container.
+You can find some more info [here](https://hub.docker.com/_/redis) about running Redis as a docker container.
 
 
 ## Hard Working Server
@@ -74,18 +74,17 @@ We will use Express framework, and install Redis and MySQL clients as dependenci
 ```bash
 $npm install express redis mysql
 ```
-***Tip:*** if you are using npm 5, you do not to specify -S or --save flag to save as a dependency in your package.json file.
-
-
+***Tip:*** if you are using npm 5, you do not need to specify -S or --save flag to save as a dependency in your package.json file.
 
 Now for some code, this is our server.js
 
 ```javascript
-const express = require('express');
-const redis = require('redis');
-const mysql = require('mysql');
-const crypto = require('crypto');
-const app = express();
+const 
+    express = require('express'),
+    redis = require('redis'),
+    mysql = require('mysql'),
+    crypto = require('crypto'),
+    app = express();
 
 const port = 5000;
 let isDBConnected = false;
@@ -95,7 +94,7 @@ let isRedisConnected = false;
 const dbConn = mysql.createConnection({
     host: 'localhost',
     user: 'geek',
-    password: process.env.QUERY_DB_PASS, //store your credentiels somewhere safe
+    password: process.env.QUERY_DB_PASS, //store your credentials somewhere safe
     database: 'employees'
 });
 
@@ -111,13 +110,13 @@ dbConn.connect((err) => {
 });
 
 // create and connect redis client to local instance.
-const redisClient = redis.createClient({password: process.env.QUERY_REDIS_PASS}); //store your credentiels somewhere safe
+const redisClient = redis.createClient({password: process.env.QUERY_REDIS_PASS}); //store your credentials somewhere safe
 
 // Print redis errors to the console
 redisClient.on('error', (err) => {
     isRedisConnected = false;
     console.error(err);
-}).on('connection', () => {
+}).on('connect', () => {
     isRedisConnected = true;
     console.log('Connected to Redis');
 });
@@ -139,10 +138,10 @@ function doQuery(req, res, next) {
         if (isExist === 1) {
             console.log('Feeling lucky, key found in Redis');
 
-            //mesure time against Redis
+            //measure time against Redis
             console.time('CacheQuery');
             redisClient.get(key, function (err, reply) {
-                //end mesure time of query against MySQL
+                //end measure time of query against MySQL
                 console.timeEnd('CacheQuery');
 
                 if(err) {
@@ -155,10 +154,10 @@ function doQuery(req, res, next) {
             next(err);
         } else {
             console.log('No luck, get the data from DB');
-            //mesure time against MySQL
+            //measure time against MySQL
             console.time('DBQuery');
             dbConn.query(query, (err, result) => {
-                //end mesure time of query against MySQL
+                //end measure time of query against MySQL
                 console.timeEnd('DBQuery');
                 if (err) {
                     next(err);
@@ -195,7 +194,7 @@ app.listen(port, () => {
 });
 ```
 
-For those who have payed attention can easily see that we can test our server with our browser at localhost:5000/query. 
+For those who have paid attention can easily see that we can test our server with our browser at localhost:5000/query.
 
 To run the query we also need to pass a query parameter for the name to search. If you will try and test the server then we will see that in the first time it will, of course, load the data from the DB and on the second try it will get it from Redis.
 
@@ -242,9 +241,9 @@ class App extends Component {
 export default App;
 ```
 
-Next up is EmpList.js, the code is also relatively simple as well. The render method is built in two parts: 
+Next up is EmpList.js, the code is also relatively simple as well. The render method is built in two parts:
 
-The header which includes our search input, and a search button. The second part, renders the employees list, and each item in the list will consist of the full name of the employee.
+The header which includes our search input, and a search button. The second part renders the employees list, and each item in the list will consist of the full name of the employee.
 
 ```javascript
 import React, { Component } from 'react';
@@ -310,4 +309,4 @@ Now we can finally test all the pieces together.
 I leave it to you guys to see the results of queries that are cached compared to ones that are not.
 
 
-Hope you like this recipe, will be back as soon as I have a new recipe ready.
+Hope you liked this recipe, will be back as soon as I have a new recipe ready.
