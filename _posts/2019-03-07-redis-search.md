@@ -55,10 +55,10 @@ $npm install faker yargs express redis
 ```
 
 Just before the full code for our backend, let's see how we will use the search API, we will use 4 methods:
-##Create - to create the new index with a schema
-##Add - to add new data to our index
-##Search - to search the data, and including highlighting which is super cool (surround with <B></B>)
-##Suggest - autocomplete, suggest results according to a passed string
+* Create - to create the new index with a schema
+* Add - to add new data to our index
+* Search - to search the data, and including highlighting which is super cool (surrounded with bold HTML tag)
+* Suggest - autocomplete, suggest results according to a passed string
 
 ```javascript
     // This is how we create an index, we just supply the index name, and specify the schema.
