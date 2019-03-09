@@ -15,13 +15,13 @@ toc: true
 One of the common use cases that I have encountered lately is to have search capabilities. This capability seems like a common standard now for all applications and channels that we tackle during our day to day use cases. In this post, I will address the needs and some of the challenges, and show how easy it is to implement blazing fast search capabilities using [RediSearch](http://redisearch.io).
 
 ## The Recipe
-In this post we will create a product catalog, the products will be indexed in Redis using RediSearch capabilities and on top, we will create a simple web client to search the products including autocomplete with React.
+We will create a product catalog, the products will be indexed in Redis using RediSearch capabilities and on top, we will create a simple web client to search the products including autocomplete with React.
 * Redis - will take the role of our blazing fast search engine.
-* Search server - which will generate and index random product data, and serve as the backend for the autocomplete and search capabilities.
+* Search server - which will generate, index random product data and serve as the backend for the autocomplete and search capabilities.
 * Client - client to query the generated data, with autocomplete capability.
 
 ## Prolog
-Text search and autocomplete, is around us for quite a while we need it when we are looking for a friend in social media, maps searches, product catalog and many more. There are quite a few known solutions like Lucene and engines that are based on it such as Solr and ElasticCache, in this post I will explore an extension to Redis which offers these capabilities with the performance that you would expect from Redis...
+Text search and autocomplete, is around us for quite a while we need it when we are looking for a friend in social media, maps searches, product catalog and many more. There are quite a few known solutions like Lucene and engines that are based on it such as Solr and ElasticCache, in this post, I will explore an extension to Redis which offers these capabilities with the performance that you would expect from Redis...
 
 ## Preparing the ingredients
 
@@ -54,7 +54,11 @@ In the generator code, I will use the simple Redis client, so that you can exami
 $npm install faker yargs express redis 
 ```
 
-Just before the full code for our backend, let's see how we will use the search API:
+Just before the full code for our backend, let's see how we will use the search API, we will use 4 methods:
+##Create - to create the new index with a schema
+##Add - to add new data to our index
+##Search - to search the data, and including highlighting which is super cool (surround with <B></B>)
+##Suggest - autocomplete, suggest results according to a passed string
 
 ```javascript
     // This is how we create an index, we just supply the index name, and specify the schema.
@@ -123,6 +127,31 @@ Just before the full code for our backend, let's see how we will use the search 
             }
         });
 
+    //////////////////////////
+
+    // autocomplete
+    let suggest = req.query.suggest;
+    let args = [
+        suggProdIndex,
+        suggest
+    ];
+
+    redisClient.send_command(
+        'FT.SUGGET',
+        args,
+        function (err, resp) {
+            if (err) {
+                console.error(err);
+                res.send(err.message);
+            } else {
+                let result = [];
+                resp.map(function (record) {
+                    let obj = {name: record}
+                    result.push(obj);
+                });
+                res.send(result);
+            }
+        });
 ```
 
 Now for some coding, this is the final version of our server side code. I
