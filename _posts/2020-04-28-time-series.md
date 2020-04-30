@@ -12,16 +12,16 @@ toc: true
     <a href="/assets/images/timeseries.png"><img src="/assets/images/timeseries.png"></a>
 </figure>
 
-The past few weeks have been strange, our lives were indeed changed with the Covid-19 outbreak. The virus has really affected us in many ways and brought a new phrase to our lives, social distancing. Social distancing affected our work, family life and one of the implications is of course health care. Since the outbreak we are looking for ways to better treat and understand Covid-19. During my work I encountered a use case, where a hospital wanted to develop remote monitoring, by using remote sensors, dashboards and alerts. This use case brought me to think that this is perfect use case to showcase [RedisTimeSeries](https://oss.redislabs.com/redistimeseries/) capabilities.
+The past few weeks have been strange, our lives were indeed changed with the Covid-19 outbreak. The virus has really affected us in many ways and brought a new phrase to our lives, social distancing. Social distancing affected our work, family life and one of the implications is, of course, health care. Since the outbreak, we are looking for ways to better treat and understand Covid-19. During my work, I encountered a use case, where a hospital wanted to develop remote monitoring, by using remote sensors, dashboards, and alerts. This use case brought me to think that this is a perfect use case to showcase [RedisTimeSeries](https://oss.redislabs.com/redistimeseries/) capabilities.
 
 ## The Recipe
-This recipe will collect 2 metrics from our patients, temperature and heart rate. Patients metrics data will be pushed to Redis to the RedisTimeSeries module which can efficiently store time series data and can easily downsample the data according to our needs and has a builtin integration with Prometheus and Grafana.
+This recipe will collect 2 metrics from our patients, temperature, and heart rate. Patients metrics data will be pushed to Redis to the RedisTimeSeries module which can efficiently store time series data and can easily downsample the data according to our needs and has a builtin integration with Prometheus and Grafana.
 * Redis - will act as our time series DB.
 * Prometheus and Grafana - will be our visualization by creating a simple dashboard.
-* RedisInsight - Redis visualization solution which can display among others RedisTimeSeries related data.
+* RedisInsight - Redis visualization solution which can display among other RedisTimeSeries related data.
 
 ## Preparing the ingredients
-Like always the fastest way to prepare what we need is the Docker magic... If you look at [RedisTimeSeries](https://oss.redislabs.com/redistimeseries/) in the quickstart you can see that there is a builtin integration with Prometheus and Grafana so we can use docker compose to set all the pieces quite easily.
+Like always the fastest way to prepare what we need is the Docker magic… If you look at [RedisTimeSeries](https://oss.redislabs.com/redistimeseries/) in the quickstart you can see that there is built-in integration with Prometheus and Grafana so we can use docker-compose to set all the pieces quite easily.
 
 ```bash
 version: '3'
@@ -50,7 +50,7 @@ Then just run docker-compose up and we are all set to go
 
 ## Producing the data
 
-Next step is to produce some patients data, in order to generate some data I have used the [redistimeseries-py](https://github.com/RedisTimeSeries/redistimeseries-py)
+The next step is to produce some patient's data, in order to generate some data I have used the [redistimeseries-py](https://github.com/RedisTimeSeries/redistimeseries-py)
 You can find about clients [here](https://oss.redislabs.com/redistimeseries/#client-libraries).
 
 ```bash
@@ -80,7 +80,7 @@ for p in range(numOfPatients):
             prodcueData(p, d, s)
 ```
 
-As you can see the code above simply pushes the patients data into Redis and also labels the data with patient ID and the device type to easily query and filter on our dashboards.
+As you can see the code above simply pushes the patient's data into Redis and also labels the data with patient ID and the device type to easily query and filter on our dashboards.
 
 ## Let's visualize
 
@@ -94,7 +94,7 @@ If we have a quick look in our docker-compose file
         - "3000:3000"
 ```
 
-We can see that we have set Grafana on port 3000, so let's login on http://localhost:3000/. If you have being paying attention then you should see something like this:
+We can see that we have set Grafana on port 3000, so let's login on http://localhost:3000/. If you have been paying attention then you should see something like this:
 
 <figure>
     <a href="/assets/images/grafana_login.png"><img src="/assets/images/grafana_login.png"></a>
@@ -130,7 +130,7 @@ The second will filter device type according to the selected patient, below is b
     <a href="/assets/images/grafana_variables.png"><img src="/assets/images/grafana_variables.png"></a>
 </figure>
 
-Now lets create the first panel which will display patients data without any filter, including all device types and all the patients. In order to this we need to make sure we select our data source and set the following query.
+Now let's create the first panel which will display patient's data without any filter, including all device types and all the patients. In order to this, we need to make sure we select our data source and set the following query.
 
 <figure>
     <a href="/assets/images/patients_panel.png"><img src="/assets/images/patients_panel.png"></a>
