@@ -86,8 +86,6 @@ As you can see the code above simply pushes the patients data into Redis and als
 
 Now that we have some data in our Redis, let's see the Grafana adapter and how do we create a simple dashboard.
 
-### Setting up Grafana
-
 If we have a quick look in our docker-compose file
 ```bash
   grafana:
