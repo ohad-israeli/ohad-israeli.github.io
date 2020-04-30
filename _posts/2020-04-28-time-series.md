@@ -15,7 +15,7 @@ toc: true
 The past few weeks have been strange, our lives were indeed changed with the Covid-19 outbreak. The virus has really affected us in many ways and brought a new phrase to our lives, social distancing. Social distancing affected our work, family life and one of the implications is, of course, health care. Since the outbreak, we are looking for ways to better treat and understand Covid-19. During my work, I encountered a use case, where a hospital wanted to develop remote monitoring, by using remote sensors, dashboards, and alerts. This use case brought me to think that this is a perfect use case to showcase [RedisTimeSeries](https://oss.redislabs.com/redistimeseries/) capabilities.
 
 ## The Recipe
-This recipe will collect 2 metrics from our patients, temperature, and heart rate. Patients metrics data will be pushed to Redis to the RedisTimeSeries module which can efficiently store time series data and can easily downsample the data according to our needs and has a builtin integration with Prometheus and Grafana.
+This recipe will collect 2 metrics from our patients, temperature, and heart rate. Patients metrics data will be pushed to Redis to the RedisTimeSeries module which can efficiently store time series data and can easily downsample the data according to our needs and has a built-in integration with Prometheus and Grafana.
 * Redis - will act as our time series DB.
 * Prometheus and Grafana - will be our visualization by creating a simple dashboard.
 * RedisInsight - Redis visualization solution which can display among other RedisTimeSeries related data.
