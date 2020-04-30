@@ -147,6 +147,13 @@ patient{patient="$patient", deviceType="$deviceType"}
     <a href="/assets/images/by_patient_panel.png"><img src="/assets/images/by_patient_panel.png"></a>
 </figure>
 
+And the final result...
+
+<figure>
+    <a href="/assets/images/dashboard.png"><img src="/assets/images/dashboard.png"></a>
+</figure>
+
+
 You can check out for more information on [RedisTimeSeries](https://oss.redislabs.com/redistimeseries/) and additional capabilities that you can leverage for your applications.
 
 Hope to see you soon on my next recipe...
