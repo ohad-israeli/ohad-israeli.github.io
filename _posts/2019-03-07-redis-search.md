@@ -4,7 +4,7 @@ excerpt: "Create blazing fast search based applications with RediSearch"
 header:
   teaser: "/assets/images/search.png"
 tags:
-- redis
+- redis, search, react
 toc: true
 ---
 

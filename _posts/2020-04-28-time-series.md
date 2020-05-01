@@ -1,10 +1,10 @@
 ---
 title: "Monitoring Covid-19 patients with RedisTimeSeries"
-excerpt: "Monitoring Covid-19 patients with RedisTimeSeries"
+excerpt: "Easily create Grafana dashboards using RedisTimeSeries"
 header:
   teaser: "/assets/images/timeseries.png"
 tags:
-- redis
+- redis, timeseries
 toc: true
 ---
 

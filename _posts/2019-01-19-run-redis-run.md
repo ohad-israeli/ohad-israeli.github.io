@@ -4,7 +4,7 @@ excerpt: "Cache your MySQL database with Redis. A full example including MySQL+R
 header:
   teaser: "/assets/images/cache-diagram.png"
 tags: 
-  - redis
+  - redis, node.js, node, react
 toc: true
 ---
 In my first [post](https://ohad-israeli.github.io/redis-the-beginning/), I have explained a little about what is Redis, and what are the common use cases for using it. In this post, we will bake a simple cache solution using Redis.
