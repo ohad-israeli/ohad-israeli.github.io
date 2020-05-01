@@ -151,7 +151,7 @@ And the final result...
     <a href="/assets/images/dashboard.png"><img src="/assets/images/dashboard.png"></a>
 </figure>
 
-
+This is, of course, a simplified version of the use case, which also included [downsampling](https://oss.redislabs.com/redistimeseries/commands/#tscreaterule) in order to create dashboards with more relevant time frames, since most metrics do not change frequently temperature, saturation, and so on.
 You can check out for more information on [RedisTimeSeries](https://oss.redislabs.com/redistimeseries/) and additional capabilities that you can leverage for your applications.
 
 Hope to see you soon on my next recipe...
