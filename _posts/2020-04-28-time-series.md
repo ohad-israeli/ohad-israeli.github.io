@@ -4,7 +4,8 @@ excerpt: "Easily create Grafana dashboards using RedisTimeSeries"
 header:
   teaser: "/assets/images/timeseries.png"
 tags:
-- redis, timeseries
+  - redis
+  - timeseries
 toc: true
 ---
 
