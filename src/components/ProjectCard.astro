@@ -1,0 +1,22 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  index: number;
+}
+
+const { project, index } = Astro.props;
+const { title, description } = project.data;
+const num = String(index + 1).padStart(2, '0');
+---
+<li class="project-row">
+  <a href={`/projects/${project.id}/`}>
+    <span class="idx">[{num}]</span>
+    <span class="pmeta">
+      <span class="ptitle">{title}</span>
+      <span class="pdesc">{description}</span>
+    </span>
+    <span class="arrow" aria-hidden="true">→</span>
+  </a>
+</li>

@@ -1,0 +1,32 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import { getCollection } from 'astro:content';
+
+const projects = (await getCollection('projects', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+);
+
+// Collect all tags for a quick overview.
+const tags = [...new Set(projects.flatMap((p) => p.data.tags))].sort();
+---
+<BaseLayout title="Projects — Ohad Israeli" wide>
+  <section class="intro">
+    <p class="signature">$ ls projects/</p>
+    <h1>Projects</h1>
+    <p class="lede">Everything I've written up so far, newest first.</p>
+    {tags.length > 0 && (
+      <ul class="tags" style="margin-top:1rem;">
+        {tags.map((t) => <li class="tag">#{t}</li>)}
+      </ul>
+    )}
+  </section>
+
+  {projects.length === 0 ? (
+    <p style="color:var(--text-dim);font-family:var(--mono);">No projects published yet.</p>
+  ) : (
+    <ul class="project-list">
+      {projects.map((project, i) => <ProjectCard project={project} index={i} />)}
+    </ul>
+  )}
+</BaseLayout>

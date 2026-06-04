@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import { getCollection } from 'astro:content';
+
+const projects = (await getCollection('projects', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+);
+const recent = projects.slice(0, 5);
+---
+<BaseLayout title="Ohad Israeli — projects" wide>
+  <section class="intro">
+    <p class="signature">$ whoami</p>
+    <h1>Ohad Israeli</h1>
+    <p class="lede">
+      I build and tinker with data-streaming and distributed systems. This is where
+      I write up the projects I'm working on — each one is an article, and the ones
+      with real code link out to their own repository.
+    </p>
+  </section>
+
+  <section>
+    <p class="section-label">recent projects <span class="rule"></span></p>
+    {recent.length === 0 ? (
+      <p style="color:var(--text-dim);font-family:var(--mono);">No projects published yet.</p>
+    ) : (
+      <ul class="project-list">
+        {recent.map((project, i) => <ProjectCard project={project} index={i} />)}
+      </ul>
+    )}
+    {projects.length > recent.length && (
+      <p style="margin-top:1.25rem;font-family:var(--mono);font-size:0.9rem;">
+        <a href="/projects">view all {projects.length} projects →</a>
+      </p>
+    )}
+  </section>
+</BaseLayout>

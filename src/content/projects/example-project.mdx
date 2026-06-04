@@ -1,0 +1,48 @@
+---
+title: "Streaming Order Events with Kafka"
+description: "A worked example of modeling order events as a Kafka topic and processing them with a streaming consumer — used here as the template for new project articles."
+date: 2026-06-02
+tags: ["kafka", "streaming", "java"]
+# repo: "https://github.com/ohad-israeli/kafka-order-events"   # uncomment when a supporting repo exists
+# demo: "https://example.com"                                   # uncomment for a live demo
+status: "active"
+draft: false
+---
+
+> This is a template article. Copy this file, rename it (the filename becomes the
+> URL slug), edit the frontmatter above, and write your project's story below.
+
+## What this project is
+
+Open with a short, plain-language summary of the problem the project solves and
+why it's interesting. Two or three sentences is plenty — the goal is to let a
+reader decide quickly whether to keep reading.
+
+## How it works
+
+Walk through the design. Code blocks are first-class on this site:
+
+```java
+public class OrderProducer {
+    public static void main(String[] args) {
+        var props = new Properties();
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("key.serializer", StringSerializer.class.getName());
+        props.put("value.serializer", StringSerializer.class.getName());
+
+        try (var producer = new KafkaProducer<String, String>(props)) {
+            producer.send(new ProducerRecord<>("orders", "order-42", "{\"total\": 19.99}"));
+        }
+    }
+}
+```
+
+You can use inline `code`, lists, tables, and images just like normal Markdown.
+
+## Notes & next steps
+
+- Link to the supporting repo by setting `repo:` in the frontmatter — a **View
+  code** button then appears in the article header.
+- Set `status` to `wip`, `active`, or `archived` to show a status badge.
+- Set `draft: true` to keep an article out of the published build while you work
+  on it.

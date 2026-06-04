@@ -1,0 +1,19 @@
+---
+import ThemeToggle from './ThemeToggle.astro';
+
+// Highlight the active top-level section.
+const path = Astro.url.pathname;
+const isActive = (base: string) =>
+  base === '/' ? path === '/' : path.startsWith(base);
+---
+<header class="site-header">
+  <div class="container wide bar">
+    <a class="brand" href="/"><span class="prompt">$</span>ohad-israeli</a>
+    <nav class="nav" aria-label="Primary">
+      <a href="/projects" aria-current={isActive('/projects') ? 'page' : undefined}>projects</a>
+      <a href="/about" aria-current={isActive('/about') ? 'page' : undefined}>about</a>
+      <a href="https://github.com/ohad-israeli" target="_blank" rel="me noopener">github</a>
+      <ThemeToggle />
+    </nav>
+  </div>
+</header>

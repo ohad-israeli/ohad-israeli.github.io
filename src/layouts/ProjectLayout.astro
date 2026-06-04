@@ -1,0 +1,52 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+
+const { project } = Astro.props;
+const { title, description, date, tags, repo, demo, status } = project.data;
+
+const dateStr = date.toISOString().slice(0, 10);
+---
+<BaseLayout title={`${title} — Ohad Israeli`} description={description}>
+  <a class="back-link" href="/projects">← all projects</a>
+
+  <article>
+    <header class="article-header">
+      <div class="meta">
+        <time datetime={dateStr}>{dateStr}</time>
+        <span class={`badge status-${status}`}>{status}</span>
+      </div>
+      <h1>{title}</h1>
+      <p class="intro lede" style="margin:0;">{description}</p>
+
+      {tags.length > 0 && (
+        <ul class="tags">
+          {tags.map((t) => <li class="tag">#{t}</li>)}
+        </ul>
+      )}
+
+      {(repo || demo) && (
+        <div class="links">
+          {repo && (
+            <a class="btn" href={repo} target="_blank" rel="noopener">
+              <span>&lt;/&gt;</span> View code
+            </a>
+          )}
+          {demo && (
+            <a class="btn" href={demo} target="_blank" rel="noopener">
+              <span>▶</span> Live demo
+            </a>
+          )}
+        </div>
+      )}
+    </header>
+
+    <div class="prose">
+      <slot />
+    </div>
+  </article>
+</BaseLayout>

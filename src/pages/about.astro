@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout title="About — Ohad Israeli">
+  <section class="intro">
+    <p class="signature">$ cat about.md</p>
+    <h1>About</h1>
+  </section>
+
+  <div class="prose">
+    <p>
+      Hi, I'm Ohad. I work on data streaming and distributed systems. This site is
+      a running log of the things I build — some are quick experiments, others have
+      a full repository of code and docs behind them.
+    </p>
+
+    <h2>How this site is organized</h2>
+    <p>
+      Each project gets its own article under <a href="/projects">/projects</a>.
+      When a project has substantial code, it lives in its own GitHub repository and
+      the article links straight to it. Smaller experiments live entirely in the
+      write-up.
+    </p>
+
+    <h2>Elsewhere</h2>
+    <ul>
+      <li>GitHub — <a href="https://github.com/ohad-israeli" target="_blank" rel="me noopener">github.com/ohad-israeli</a></li>
+      <li>RSS — <a href="/rss.xml">subscribe to new projects</a></li>
+    </ul>
+  </div>
+</BaseLayout>
