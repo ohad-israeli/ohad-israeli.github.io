@@ -1,86 +1,82 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 540" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" role="img" aria-label="On-premises SQL Server replicated to Amazon RDS for SQL Server via Debezium CDC over AWS Direct Connect">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 560" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace" role="img" aria-label="On-premises SQL Server replicated to Amazon RDS for SQL Server via Debezium CDC, streaming through Confluent Cloud (Kafka + Schema Registry), with the Debezium JDBC sink writing to RDS over AWS Direct Connect.">
   <defs>
     <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L8,3 L0,6 z" fill="#ffb454"/>
     </marker>
   </defs>
 
-  <!-- panel -->
-  <rect x="0" y="0" width="1100" height="540" rx="12" fill="#0d1117"/>
-  <text x="32" y="44" fill="#ffb454" font-size="19" font-weight="600">On-prem SQL Server &#8594; Amazon RDS for SQL Server</text>
-  <text x="32" y="68" fill="#8a93a6" font-size="13">Near-real-time replication with Debezium CDC + the JDBC sink</text>
+  <rect x="0" y="0" width="1180" height="560" rx="12" fill="#0d1117"/>
+  <text x="32" y="42" fill="#ffb454" font-size="19" font-weight="600">On-prem SQL Server &#8594; Confluent Cloud &#8594; Amazon RDS for SQL Server</text>
+  <text x="32" y="66" fill="#8a93a6" font-size="13">Near-real-time CDC replication with Debezium + the JDBC sink</text>
 
   <!-- ON-PREM ZONE -->
-  <rect x="30" y="150" width="300" height="252" rx="10" fill="none" stroke="#475569" stroke-width="1.5" stroke-dasharray="6 5"/>
-  <text x="48" y="178" fill="#94a3b8" font-size="12" letter-spacing="1">ON-PREMISES DATA CENTER</text>
-  <!-- source SQL Server cylinder -->
-  <g>
-    <rect x="108" y="222" width="104" height="72" fill="#1b2330"/>
-    <line x1="108" y1="222" x2="108" y2="294" stroke="#6b7689" stroke-width="1.5"/>
-    <line x1="212" y1="222" x2="212" y2="294" stroke="#6b7689" stroke-width="1.5"/>
-    <ellipse cx="160" cy="294" rx="52" ry="12" fill="#1b2330" stroke="#6b7689" stroke-width="1.5"/>
-    <ellipse cx="160" cy="222" rx="52" ry="12" fill="#243043" stroke="#6b7689" stroke-width="1.5"/>
-    <text x="160" y="226" text-anchor="middle" fill="#cfd8e3" font-size="11">SQL Server</text>
-    <text x="160" y="330" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="600">Source DB</text>
-    <text x="160" y="348" text-anchor="middle" fill="#8a93a6" font-size="11">SQL Server &#183; CDC on</text>
-  </g>
+  <rect x="28" y="150" width="320" height="380" rx="10" fill="none" stroke="#475569" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="44" y="176" fill="#94a3b8" font-size="12" letter-spacing="1">ON-PREMISES DATA CENTER</text>
+  <!-- SQL Server source cylinder -->
+  <rect x="60" y="217" width="96" height="62" fill="#1b2330"/>
+  <line x1="60" y1="217" x2="60" y2="279" stroke="#6c8ebf" stroke-width="1.5"/>
+  <line x1="156" y1="217" x2="156" y2="279" stroke="#6c8ebf" stroke-width="1.5"/>
+  <ellipse cx="108" cy="279" rx="48" ry="11" fill="#1b2330" stroke="#6c8ebf" stroke-width="1.5"/>
+  <ellipse cx="108" cy="217" rx="48" ry="11" fill="#243043" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text x="108" y="221" text-anchor="middle" fill="#cfd8e3" font-size="11">SQL Server</text>
+  <text x="108" y="312" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="600">Source DB</text>
+  <text x="108" y="330" text-anchor="middle" fill="#8a93a6" font-size="11">SQL Server &#183; CDC</text>
+  <!-- Kafka Connect box -->
+  <rect x="52" y="384" width="268" height="124" rx="8" fill="#161b22" stroke="#ffb454" stroke-width="1.5"/>
+  <text x="186" y="416" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="600">Kafka Connect</text>
+  <text x="186" y="434" text-anchor="middle" fill="#8a93a6" font-size="11">self-managed</text>
+  <text x="186" y="466" text-anchor="middle" fill="#cfd8e3" font-size="11">Debezium SQL Server source</text>
+  <text x="186" y="484" text-anchor="middle" fill="#cfd8e3" font-size="11">+ Debezium JDBC sink</text>
+
+  <!-- CONFLUENT CLOUD ZONE -->
+  <rect x="392" y="118" width="356" height="304" rx="14" fill="#3b82f6" fill-opacity="0.05" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="412" y="146" fill="#7cb0ff" font-size="12" letter-spacing="1">CONFLUENT CLOUD</text>
+  <text x="412" y="164" fill="#8a93a6" font-size="10.5">Kafka &#183; Schema Registry &#183; Console UI</text>
+  <!-- Kafka cluster -->
+  <rect x="500" y="196" width="180" height="86" rx="8" fill="#161b22" stroke="#3b82f6" stroke-width="1.5"/>
+  <g fill="#7cb0ff"><circle cx="540" cy="224" r="5"/><circle cx="540" cy="244" r="5"/><circle cx="566" cy="234" r="5"/></g>
+  <g stroke="#3b82f6" stroke-width="1.5"><line x1="545" y1="224" x2="561" y2="234"/><line x1="545" y1="244" x2="561" y2="234"/></g>
+  <text x="600" y="230" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="600">Kafka</text>
+  <text x="600" y="248" text-anchor="middle" fill="#8a93a6" font-size="10.5">cluster · topics</text>
+  <!-- Schema Registry -->
+  <rect x="430" y="320" width="280" height="64" rx="8" fill="#161b22" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="570" y="348" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="600">Schema Registry</text>
+  <text x="570" y="366" text-anchor="middle" fill="#8a93a6" font-size="10.5">Stream Governance &#183; Avro</text>
 
   <!-- AWS ZONE -->
-  <rect x="372" y="92" width="696" height="416" rx="10" fill="#ff9900" fill-opacity="0.04" stroke="#ff9900" stroke-width="1.5"/>
-  <text x="392" y="120" fill="#ff9900" font-size="12" letter-spacing="1">AWS CLOUD &#183; VPC</text>
+  <rect x="792" y="150" width="360" height="320" rx="10" fill="#ff9900" fill-opacity="0.045" stroke="#ff9900" stroke-width="1.5"/>
+  <text x="812" y="178" fill="#ff9900" font-size="12" letter-spacing="1">AWS CLOUD</text>
+  <!-- RDS for SQL Server cylinder (magenta = AWS database icon color) -->
+  <rect x="918" y="262" width="104" height="64" fill="#2a1430"/>
+  <line x1="918" y1="262" x2="918" y2="326" stroke="#C925D1" stroke-width="1.5"/>
+  <line x1="1022" y1="262" x2="1022" y2="326" stroke="#C925D1" stroke-width="1.5"/>
+  <ellipse cx="970" cy="326" rx="52" ry="12" fill="#2a1430" stroke="#C925D1" stroke-width="1.5"/>
+  <ellipse cx="970" cy="262" rx="52" ry="12" fill="#3a1c45" stroke="#C925D1" stroke-width="1.5"/>
+  <text x="970" y="266" text-anchor="middle" fill="#f0a8ff" font-size="11">RDS</text>
+  <text x="970" y="360" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="600">Amazon RDS</text>
+  <text x="970" y="378" text-anchor="middle" fill="#8a93a6" font-size="11">for SQL Server &#183; target</text>
 
-  <!-- Debezium source connector -->
-  <rect x="400" y="300" width="158" height="94" rx="8" fill="#161b22" stroke="#ffb454" stroke-width="1.5"/>
-  <text x="479" y="334" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="600">Debezium</text>
-  <text x="479" y="352" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="600">SQL Server source</text>
-  <text x="479" y="372" text-anchor="middle" fill="#8a93a6" font-size="11">Kafka Connect</text>
+  <!-- Direct Connect badge -->
+  <rect x="612" y="474" width="172" height="40" rx="8" fill="#161b22" stroke="#8C4FFF" stroke-width="1.5"/>
+  <text x="698" y="499" text-anchor="middle" fill="#c4a6ff" font-size="11">AWS Direct Connect</text>
 
-  <!-- Amazon MSK -->
-  <rect x="612" y="150" width="180" height="104" rx="8" fill="#161b22" stroke="#ff9900" stroke-width="1.5"/>
-  <g stroke="#ff9900" stroke-width="2" fill="none">
-    <line x1="636" y1="178" x2="768" y2="178"/>
-    <line x1="636" y1="190" x2="768" y2="190"/>
-    <line x1="636" y1="202" x2="768" y2="202"/>
-  </g>
-  <text x="702" y="226" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="600">Amazon MSK</text>
-  <text x="702" y="244" text-anchor="middle" fill="#8a93a6" font-size="11">Kafka + Schema Registry</text>
+  <!-- EDGES -->
+  <!-- SQL Server -> Connect -->
+  <line x1="108" y1="290" x2="150" y2="382" stroke="#ffb454" stroke-width="2" marker-end="url(#ah)"/>
+  <rect x="150" y="338" width="96" height="18" rx="4" fill="#0d1117"/>
+  <text x="156" y="351" fill="#cfd8e3" font-size="10.5">CDC capture</text>
 
-  <!-- Debezium JDBC sink -->
-  <rect x="612" y="360" width="180" height="104" rx="8" fill="#161b22" stroke="#ffb454" stroke-width="1.5"/>
-  <text x="702" y="396" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="600">Debezium JDBC sink</text>
-  <text x="702" y="416" text-anchor="middle" fill="#8a93a6" font-size="11">Kafka Connect</text>
-  <text x="702" y="438" text-anchor="middle" fill="#ffb454" font-size="11">identity insert ON</text>
+  <!-- Connect <-> Confluent Cloud Kafka (bidirectional) -->
+  <line x1="320" y1="430" x2="498" y2="252" stroke="#ffb454" stroke-width="2" marker-end="url(#ah)" marker-start="url(#ah)"/>
+  <rect x="338" y="388" width="150" height="34" rx="4" fill="#0d1117"/>
+  <text x="346" y="402" fill="#7cb0ff" font-size="10.5">produce / consume</text>
+  <text x="346" y="416" fill="#8a93a6" font-size="10">SASL_SSL · Avro</text>
 
-  <!-- target RDS cylinder -->
-  <g>
-    <rect x="888" y="300" width="104" height="72" fill="#2a2012"/>
-    <line x1="888" y1="300" x2="888" y2="372" stroke="#ff9900" stroke-width="1.5"/>
-    <line x1="992" y1="300" x2="992" y2="372" stroke="#ff9900" stroke-width="1.5"/>
-    <ellipse cx="940" cy="372" rx="52" ry="12" fill="#2a2012" stroke="#ff9900" stroke-width="1.5"/>
-    <ellipse cx="940" cy="300" rx="52" ry="12" fill="#3a2c16" stroke="#ff9900" stroke-width="1.5"/>
-    <text x="940" y="304" text-anchor="middle" fill="#ffd9a0" font-size="11">RDS</text>
-    <text x="940" y="408" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="600">Amazon RDS</text>
-    <text x="940" y="426" text-anchor="middle" fill="#8a93a6" font-size="11">for SQL Server &#183; target</text>
-  </g>
+  <!-- Connect -> Direct Connect -->
+  <line x1="320" y1="480" x2="610" y2="492" stroke="#ffb454" stroke-width="2" marker-end="url(#ah)"/>
 
-  <!-- edges -->
-  <!-- source -> debezium source (across boundary) -->
-  <line x1="214" y1="262" x2="398" y2="330" stroke="#ffb454" stroke-width="2" marker-end="url(#ah)"/>
-  <rect x="244" y="226" width="190" height="20" rx="4" fill="#0d1117"/>
-  <text x="252" y="240" fill="#cfd8e3" font-size="11">AWS Direct Connect / VPN</text>
-
-  <!-- debezium source -> MSK -->
-  <line x1="520" y1="300" x2="640" y2="256" stroke="#ffb454" stroke-width="2" marker-end="url(#ah)"/>
-  <rect x="520" y="276" width="118" height="18" rx="4" fill="#0d1117"/>
-  <text x="527" y="289" fill="#cfd8e3" font-size="10.5">CDC events (Avro)</text>
-
-  <!-- MSK -> sink -->
-  <line x1="702" y1="254" x2="702" y2="358" stroke="#ffb454" stroke-width="2" marker-end="url(#ah)"/>
-  <rect x="710" y="298" width="86" height="18" rx="4" fill="#0d1117"/>
-  <text x="716" y="311" fill="#cfd8e3" font-size="10.5">Kafka topic</text>
-
-  <!-- sink -> RDS -->
-  <line x1="792" y1="408" x2="890" y2="350" stroke="#ffb454" stroke-width="2" marker-end="url(#ah)"/>
-  <rect x="788" y="430" width="186" height="18" rx="4" fill="#0d1117"/>
-  <text x="794" y="443" fill="#cfd8e3" font-size="10.5">upsert + IDENTITY_INSERT</text>
+  <!-- Direct Connect -> RDS -->
+  <line x1="784" y1="492" x2="930" y2="312" stroke="#ffb454" stroke-width="2" marker-end="url(#ah)"/>
+  <rect x="792" y="430" width="206" height="18" rx="4" fill="#0d1117"/>
+  <text x="798" y="443" fill="#cfd8e3" font-size="10.5">upsert + IDENTITY_INSERT</text>
 </svg>
