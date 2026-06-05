@@ -1,0 +1,87 @@
+---
+title: "Replicating SQL Server with the Debezium JDBC Sink"
+description: "An end-to-end SQL Server → SQL Server replication demo with Debezium CDC and the JDBC sink — including the table's IDENTITY primary key, with no custom connector."
+date: 2026-06-05
+tags: ["debezium", "kafka", "cdc", "sql-server"]
+repo: "https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink"
+status: "active"
+draft: false
+---
+
+## What this is
+
+A small, self-contained example that replicates a table from one SQL Server to
+another through Kafka: a **Debezium SQL Server CDC source** captures changes, and
+the **Debezium JDBC sink** writes them into a second SQL Server. The whole thing
+comes up with `docker compose` and one script.
+
+The interesting part is the table's primary key. It's an `IDENTITY` column — and
+SQL Server normally rejects inserts into identity columns. So "just replicate the
+table, identity values and all" is trickier than it sounds. The good news: the
+Debezium JDBC sink now handles this natively, so the custom connector this used to
+require is no longer needed.
+
+## The pipeline
+
+```
+SourceDB (CDC on)
+   │   Debezium SQL Server source
+   ▼
+Kafka topic  sqlserver_source.SourceDB.dbo.TBL_AG_TEST4   (Avro + Schema Registry)
+   │   Debezium JDBC sink   (upsert, identity insert ON)
+   ▼
+TargetDB → dbo.TBL_AG_TEST4   (same rows, same identity values)
+```
+
+The source table is seeded with deliberately non-contiguous identity values
+(`1, 11, 21, 31, 41`) so it's obvious whether the *exact* keys survived the trip
+rather than getting renumbered by the target.
+
+## The key piece
+
+Everything hinges on one line in the sink config. The sink runs in `upsert` mode
+keyed on the Debezium record key, and turns on SQL Server identity insert:
+
+```json
+{
+  "connector.class": "io.debezium.connector.jdbc.JdbcSinkConnector",
+  "topics": "sqlserver_source.SourceDB.dbo.TBL_AG_TEST4",
+  "insert.mode": "upsert",
+  "delete.enabled": "true",
+  "primary.key.mode": "record_key",
+  "primary.key.fields": "col1",
+  "table.name.format": "TBL_AG_TEST4",
+  "dialect.sqlserver.identity.insert": "true"
+}
+```
+
+With `dialect.sqlserver.identity.insert` set to `true`, the sink wraps each write
+batch in `SET IDENTITY_INSERT <table> ON` / `OFF`, so the source's identity values
+are inserted verbatim instead of being rejected or re-generated. This needs
+Debezium JDBC connector **v3.0.7 or newer**.
+
+## Running it
+
+```bash
+git clone https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink
+cd debezium-jdbc-sqlserver-sink
+./scripts/up.sh
+```
+
+`up.sh` brings up the stack, enables CDC and seeds the source, registers both
+connectors, and prints the source and target side by side. After it settles, the
+target table holds the same five rows with the same `col1` values. Insert another
+row on the source and re-run `scripts/verify.sh` to watch it flow through.
+
+> Heads up: this runs **two** SQL Server containers plus Kafka, Connect, and
+> Schema Registry — give Docker ~8 GB of RAM.
+
+## Why it matters
+
+This pattern — Debezium CDC source into the Debezium JDBC sink — is a clean way to
+do heterogeneous or same-engine replication without bespoke code. SQL Server
+identity columns used to be the thing that forced you off the happy path and into a
+custom sink connector. Now it's a single config flag, which makes the
+off-the-shelf connectors a viable answer for a lot more replication jobs.
+
+Full code, configs, and SQL are in the [repo](https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink).
