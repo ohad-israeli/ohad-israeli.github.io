@@ -11,12 +11,11 @@ draft: false
 ## The business problem
 
 A company runs its core transactional system on an **on-premises SQL Server** and
-wants a continuously updated copy in **Amazon RDS for SQL Server** — to feed cloud
-analytics and reporting, to enable a phased migration, or to keep a warm DR replica
-in the cloud. The requirements are the awkward part: it has to be **near-real-time**
-(no nightly ETL window), run **without downtime** on the source, and the replica
-must keep the **exact same primary keys** — which are `IDENTITY` columns that SQL
-Server normally won't let you insert into.
+needs a continuously updated copy in **Amazon RDS for SQL Server** — to power cloud
+analytics and reporting, support a phased migration to the cloud, and keep a warm
+disaster-recovery replica. That copy has to stay current in **near-real-time**, put
+**no downtime or load on the production source**, and reproduce the data **exactly** —
+right down to the `IDENTITY` primary keys that downstream systems rely on.
 
 The shape of the solution: **Debezium** captures every change from the on-prem SQL
 Server via CDC and streams it through **Confluent Cloud** — managed Kafka and Schema
@@ -49,15 +48,6 @@ database and an RDS endpoint later is mostly connection strings.
 The source table is seeded with deliberately non-contiguous identity values
 (`1, 11, 21, 31, 41`) so it's obvious whether the *exact* keys survived the trip
 rather than getting renumbered by the target.
-
-### Credentials stay out of git
-
-All Confluent Cloud credentials (bootstrap server, Kafka API key/secret, Schema
-Registry URL + key/secret) live in a local **`.env`** file that's `.gitignore`d.
-`docker-compose` reads it to configure the Connect worker, and the connector JSON
-references the secrets through Kafka Connect's **env config provider**
-(`${env:CC_SR_API_KEY}`, …) — so the committed configs contain *references*, never
-secret values.
 
 ## The key piece
 
