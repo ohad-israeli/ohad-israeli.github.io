@@ -1,37 +1,47 @@
 ---
 title: "Replicating SQL Server with the Debezium JDBC Sink"
-description: "An end-to-end SQL Server → SQL Server replication demo with Debezium CDC and the JDBC sink — including the table's IDENTITY primary key, with no custom connector."
+description: "Near-real-time replication from an on-premises SQL Server to Amazon RDS for SQL Server with Debezium CDC and the JDBC sink — identity keys and all, no custom connector."
 date: 2026-06-05
-tags: ["debezium", "kafka", "cdc", "sql-server"]
+tags: ["debezium", "kafka", "cdc", "sql-server", "aws"]
 repo: "https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink"
 status: "active"
 draft: false
 ---
 
-## What this is
+## The business problem
 
-A small, self-contained example that replicates a table from one SQL Server to
-another through Kafka: a **Debezium SQL Server CDC source** captures changes, and
-the **Debezium JDBC sink** writes them into a second SQL Server. The whole thing
-comes up with `docker compose` and one script.
+A company runs its core transactional system on an **on-premises SQL Server** and
+wants a continuously updated copy in **Amazon RDS for SQL Server** — to feed cloud
+analytics and reporting, to enable a phased migration, or to keep a warm DR replica
+in the cloud. The requirements are the awkward part: it has to be **near-real-time**
+(no nightly ETL window), run **without downtime** on the source, and the replica
+must keep the **exact same primary keys** — which are `IDENTITY` columns that SQL
+Server normally won't let you insert into.
 
-The interesting part is the table's primary key. It's an `IDENTITY` column — and
-SQL Server normally rejects inserts into identity columns. So "just replicate the
-table, identity values and all" is trickier than it sounds. The good news: the
-Debezium JDBC sink now handles this natively, so the custom connector this used to
-require is no longer needed.
+The shape of the solution: **Debezium** captures every change from the on-prem SQL
+Server via CDC and streams it through Kafka (here, **Amazon MSK**) over a private
+**AWS Direct Connect / VPN** link; the **Debezium JDBC sink** then writes those
+changes into RDS — preserving the identity values natively, with no custom code.
 
-## The pipeline
+<figure>
+  <img
+    src="/diagrams/debezium-onprem-to-rds.svg"
+    alt="On-premises SQL Server replicated to Amazon RDS for SQL Server: Debezium CDC source over AWS Direct Connect into Amazon MSK, then the Debezium JDBC sink writes to RDS with identity insert."
+  />
+  <figcaption>
+    On-prem SQL Server → Debezium CDC → Amazon MSK → Debezium JDBC sink → Amazon RDS.
+    Editable source: <a href="/diagrams/debezium-onprem-to-rds.drawio">debezium-onprem-to-rds.drawio</a>.
+  </figcaption>
+</figure>
 
-```
-SourceDB (CDC on)
-   │   Debezium SQL Server source
-   ▼
-Kafka topic  sqlserver_source.SourceDB.dbo.TBL_AG_TEST4   (Avro + Schema Registry)
-   │   Debezium JDBC sink   (upsert, identity insert ON)
-   ▼
-TargetDB → dbo.TBL_AG_TEST4   (same rows, same identity values)
-```
+## Try it locally
+
+The [repo](https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink) is a
+self-contained stand-in for that architecture. Instead of real on-prem hardware and
+an RDS instance, it runs **two SQL Server containers** (source + target) wired up
+with the same Debezium CDC source and JDBC sink, so you can watch the whole flow on
+a laptop with `docker compose`. Pointing it at a real on-premises source and an RDS
+endpoint later is mostly a matter of connection strings.
 
 The source table is seeded with deliberately non-contiguous identity values
 (`1, 11, 21, 31, 41`) so it's obvious whether the *exact* keys survived the trip
@@ -78,10 +88,11 @@ row on the source and re-run `scripts/verify.sh` to watch it flow through.
 
 ## Why it matters
 
-This pattern — Debezium CDC source into the Debezium JDBC sink — is a clean way to
-do heterogeneous or same-engine replication without bespoke code. SQL Server
-identity columns used to be the thing that forced you off the happy path and into a
-custom sink connector. Now it's a single config flag, which makes the
-off-the-shelf connectors a viable answer for a lot more replication jobs.
+On-prem-to-cloud database replication is usually where teams reach for a managed
+service or a pile of bespoke scripts. The Debezium CDC source into the Debezium
+JDBC sink is a clean, open-source path that handles it as a stream — and SQL Server
+identity columns, which used to force you onto a custom sink connector, are now a
+single config flag. That makes the off-the-shelf connectors a viable answer for a
+lot more replication and migration jobs.
 
 Full code, configs, and SQL are in the [repo](https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink).

@@ -1,0 +1,51 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="onprem-to-rds" id="onprem-to-rds">
+    <mxGraphModel dx="1100" dy="600" grid="1" gridSize="10" guides="1" connect="1" arrows="1" page="1" pageWidth="1100" pageHeight="560" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Editable source for /diagrams/debezium-onprem-to-rds.svg.
+             Boxes are labeled; to swap in official vendor icons, use the draw.io
+             MCP `search_shapes` (e.g. "RDS SQL Server", "Amazon MSK",
+             "Direct Connect") and paste the returned style onto each node. -->
+
+        <mxCell id="onprem" value="ON-PREMISES DATA CENTER" style="rounded=1;dashed=1;dashPattern=6 5;strokeColor=#475569;fillColor=none;verticalAlign=top;fontColor=#475569;fontSize=12;align=left;spacingLeft=12;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="150" width="280" height="250" as="geometry"/>
+        </mxCell>
+        <mxCell id="src" value="Source DB&#10;SQL Server (CDC on)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="120" y="220" width="110" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="aws" value="AWS CLOUD · VPC" style="rounded=1;strokeColor=#FF9900;fillColor=#FFF7E6;verticalAlign=top;fontColor=#D97706;fontSize=12;align=left;spacingLeft=12;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="380" y="90" width="690" height="420" as="geometry"/>
+        </mxCell>
+        <mxCell id="dbzsrc" value="Debezium&#10;SQL Server source&#10;(Kafka Connect)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="410" y="300" width="160" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="msk" value="Amazon MSK&#10;Apache Kafka + Schema Registry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#FF9900;" vertex="1" parent="1">
+          <mxGeometry x="620" y="150" width="190" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="sink" value="Debezium JDBC sink&#10;(Kafka Connect)&#10;dialect.sqlserver.identity.insert" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;" vertex="1" parent="1">
+          <mxGeometry x="620" y="360" width="190" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="rds" value="Amazon RDS&#10;for SQL Server (target)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#FFE6CC;strokeColor=#FF9900;" vertex="1" parent="1">
+          <mxGeometry x="900" y="300" width="110" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" value="AWS Direct Connect / VPN" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#D97706;fontColor=#475569;" edge="1" parent="1" source="src" target="dbzsrc">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" value="CDC events (Avro)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#D6B656;" edge="1" parent="1" source="dbzsrc" target="msk">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" value="Kafka topic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#D6B656;" edge="1" parent="1" source="msk" target="sink">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" value="upsert + IDENTITY_INSERT" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#D6B656;" edge="1" parent="1" source="sink" target="rds">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
