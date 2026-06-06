@@ -51,12 +51,13 @@ rather than getting renumbered by the target.
 
 ## The key piece
 
-Everything hinges on one line in the sink config. The sink runs in `upsert` mode
-keyed on the Debezium record key, and turns on SQL Server identity insert:
+Two settings in the sink config carry the whole thing — the identity-insert dialect
+flag, and a `replication=true` on the JDBC connection URL:
 
 ```json
 {
   "connector.class": "io.debezium.connector.jdbc.JdbcSinkConnector",
+  "connection.url": "jdbc:sqlserver://<target-host>:1433;databaseName=TargetDB;encrypt=false;trustServerCertificate=true;replication=true",
   "topics": "sqlserver_source.SourceDB.dbo.TBL_AG_TEST4",
   "insert.mode": "upsert",
   "delete.enabled": "true",
@@ -67,10 +68,18 @@ keyed on the Debezium record key, and turns on SQL Server identity insert:
 }
 ```
 
-With `dialect.sqlserver.identity.insert` set to `true`, the sink wraps each write
-batch in `SET IDENTITY_INSERT <table> ON` / `OFF`, so the source's identity values
-are inserted verbatim instead of being rejected or re-generated. This needs the
-Debezium JDBC connector **v3.0.7 or newer**.
+`dialect.sqlserver.identity.insert: true` makes the sink wrap each write batch in
+`SET IDENTITY_INSERT <table> ON` / `OFF`, so the source's identity values are
+inserted verbatim instead of being re-generated. This needs the Debezium JDBC
+connector **v3.0.7 or newer**.
+
+The catch that's easy to miss is the **`;replication=true`** on the connection URL.
+The primary key is declared `IDENTITY(1,10) NOT FOR REPLICATION`, and SQL Server
+only honors an explicitly-inserted identity value for a `NOT FOR REPLICATION` column
+when the connection identifies itself as a replication connection. Leave the flag
+off and SQL Server quietly ignores the value you send and assigns its own — so the
+keys silently drift out of sync between source and target. With it, the exact source
+keys land in the target.
 
 ## Running it
 
