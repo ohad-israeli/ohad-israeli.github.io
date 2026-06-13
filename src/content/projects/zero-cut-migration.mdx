@@ -1,0 +1,191 @@
+---
+title: "Zero-Cut Kafka Migration to a Private Confluent Cloud"
+description: "Moving live clients off a self-managed Confluent Server onto a private (PSC) Confluent Cloud cluster with no client restarts — using a CPC Gateway as the stable endpoint, source-initiated Cluster Linking, and KCP for the cutover."
+date: 2026-06-13
+tags: ["kafka", "confluent-cloud", "cluster-linking", "migration", "private-service-connect", "gcp", "kubernetes"]
+repo: "https://github.com/ohad-israeli/zero-cut-migration"
+status: "active"
+draft: false
+---
+
+## The business problem
+
+A company runs its event backbone on a **self-managed Kafka** cluster and wants to
+move to **Confluent Cloud** — to stop operating brokers, get elastic scale, and pick
+up managed Schema Registry and governance. Two constraints make this hard. First,
+there are **dozens of producers and consumers** owned by different teams, and there is
+no maintenance window in which all of them can be coordinated to restart against a new
+bootstrap address. Second, security requires that the new cluster carry **no public
+Kafka endpoint** — it must be reachable only over **private networking** inside the
+company's own VPC.
+
+So the migration has to be *zero-cut*: clients keep their existing connection, the
+data arrives in Confluent Cloud byte-for-byte with consumer positions intact, and the
+switch happens underneath them in a single operator action — all while the destination
+stays private.
+
+The shape of the solution: clients connect to a **CPC Gateway** instead of to a broker.
+A **source-initiated Cluster Link** continuously replicates topics and consumer offsets
+to a private Confluent Cloud Dedicated cluster, dialing **outbound** over **GCP Private
+Service Connect (PSC)**. When lag reaches zero, **[KCP](https://github.com/confluentinc/kcp)**
+fences the Gateway for a moment, promotes the mirror topics, and re-points the Gateway
+at Confluent Cloud — clients reconnect to the *same* address and keep going.
+
+<figure>
+  <img
+    src="/diagrams/zero-cut-migration.svg"
+    alt="Clients connect to a CPC Gateway running on Kubernetes inside the customer VPC. Before cutover the Gateway routes to a self-managed Confluent Server source; a source-initiated Cluster Link dials outbound over a GCP Private Service Connect endpoint to a private Confluent Cloud Dedicated cluster, mirroring topics and syncing consumer offsets. KCP drives the cutover that flips the Gateway's upstream from the source to Confluent Cloud."
+  />
+  <figcaption>
+    Clients → CPC Gateway → self-managed Confluent Server (before); a source-initiated
+    Cluster Link dials out over a PSC endpoint to a private Confluent Cloud cluster; KCP
+    flips the Gateway upstream to Confluent Cloud (after) — same client endpoint, no
+    restart. Editable source:
+    <a href="/diagrams/zero-cut-migration.drawio">zero-cut-migration.drawio</a>.
+  </figcaption>
+</figure>
+
+## Try it yourself
+
+The [repo](https://github.com/ohad-israeli/zero-cut-migration) is a runnable version of
+this architecture on a single machine. The source is a self-managed **Confluent Server**
+(`cp-server`, KRaft, single node) in Docker, standing in for any CP or MSK-style cluster
+you'd migrate off. The **CPC Gateway** runs on **minikube** via Confluent for Kubernetes,
+and `terraform/` provisions the real Confluent Cloud destination — a **Dedicated** cluster
+on a **PRIVATELINK network** (GCP PSC), with Schema Registry, a service account, and API
+keys. The cluster link and the cutover are real Confluent Cloud operations.
+
+Cluster Linking is a Confluent Server capability — which is also *why* the source is
+`cp-server` rather than plain Apache Kafka. It is what lets the source replicate itself
+into Confluent Cloud with offsets preserved.
+
+## First, move clients onto the Gateway
+
+The whole scheme rests on clients already talking to the **Gateway** before the cutover —
+so the one client-facing change is repointing their `bootstrap.servers` from the brokers
+to the Gateway. The reason this is low-risk is *when* it happens: you do it while the
+Gateway still routes straight through to the **source**, so behaviour is byte-for-byte
+identical. There is no data movement and no flag day — each team repoints and does a
+rolling restart of its own apps on its own schedule, and you watch them land in the
+Gateway log (`Downstream … => Upstream [192.168.49.50:9094]`) long before anything
+migrates.
+
+To shrink that to *zero* client changes, don't hand clients a broker address at all —
+give them a **DNS name you control** and point clients at that. When it's time, you flip
+the DNS record (or CNAME) from the brokers to the Gateway; clients re-resolve on their
+next reconnect and never have a config edit or a coordinated restart. Either way, the move
+onto the Gateway is a calm, reversible prerequisite — decoupled from the migration itself,
+which is the next section.
+
+## The key piece
+
+What makes the cut "zero" is that **clients never address a broker** — they address the
+Gateway, and only the Gateway's *upstream* changes. The replication that makes the switch
+safe is a **source-initiated** Cluster Link, which is two links describing one pipe:
+
+```bash
+# 1. On Confluent Cloud — an INBOUND destination link that waits for the source to dial in:
+#    link.mode=DESTINATION, connection.mode=INBOUND   (created via the Kafka REST API)
+
+# 2. On the self-managed source — an OUTBOUND source link that dials Confluent Cloud:
+kafka-cluster-links --bootstrap-server cp-source:9092 --create \
+  --link zerocut-link --cluster-id "$CC_CLUSTER_ID" --config-file - <<'CFG'
+link.mode=SOURCE
+connection.mode=OUTBOUND
+bootstrap.servers=lkc-xxxxxxx.<domain>.us-east1.gcp.confluent.cloud:9092
+security.protocol=SASL_SSL
+sasl.mechanism=PLAIN
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username='<key>' password='<secret>';
+local.listener.name=INTERNAL
+local.security.protocol=PLAINTEXT
+CFG
+```
+
+A normal Cluster Link runs the other way: the *destination* dials the source. That can't
+work when the source sits in a private network with no inbound — and it's exactly backwards
+for a private destination too. Flipping to **source-initiated** means the only connection
+is the source reaching **out** to Confluent Cloud, which is the direction private networking
+allows.
+
+### The catch that's easy to miss
+
+The destination is private, so the source dials Confluent Cloud over a **PSC endpoint** —
+a forwarding rule in your VPC, pointed at the per-zone service attachment Confluent
+provisions for the cluster. The trap is **DNS**. A private CC cluster publishes its
+**broker IP addresses in public DNS** — and those are Confluent's *internal* RFC-1918
+addresses, which are not routable from your VPC. Point a client at the bootstrap name as-is
+and it resolves to an address it can never reach:
+
+```text
+$ getent hosts lkc-xxxxxxx.<domain>.us-east1.gcp.confluent.cloud
+10.1.32.2   lkc-xxxxxxx...     # CC's published broker IP — unreachable from your VPC
+```
+
+The fix is to **override resolution** with a private Cloud DNS zone for the cluster's
+domain, whose wildcard record points at your **PSC endpoint IPs** instead:
+
+```bash
+gcloud dns managed-zones create zerocut-cc-psc --visibility=private \
+  --networks="$VPC" --dns-name="$DOMAIN."
+gcloud dns record-sets create "*.$DOMAIN." --zone=zerocut-cc-psc \
+  --type=A --ttl=60 --rrdatas="10.1.0.22,10.1.0.24,10.1.0.25"   # the PSC endpoints
+```
+
+With the override in place the bootstrap *and* every broker hostname the cluster
+advertises resolve to the PSC endpoints, and the source-initiated link comes up `ACTIVE`
+on both sides with the mirror draining to zero lag. Miss it and nothing connects, with a
+DNS answer that looks deceptively valid.
+
+## Running it
+
+```bash
+git clone https://github.com/ohad-israeli/zero-cut-migration
+cd zero-cut-migration
+
+# 1. Provision the private Confluent Cloud destination, then wire up PSC + DNS (one-time):
+(cd terraform && terraform apply && terraform output -raw dotenv > ../.env)
+#    create a PSC endpoint per service attachment + the private DNS zone above — see MIGRATION.md
+
+# 2. Bring up the source and the Gateway (clients route through the Gateway to the source):
+docker compose up -d
+export GATEWAY_IMAGE=confluentinc/cpc-gateway:1.2.0
+(cd gateway && ./render.sh) && kubectl apply -n confluent -f gateway/rendered/gateway_init.yaml
+
+# 3. Start replicating, then cut over once lag is zero:
+scripts/create-cluster-link.sh
+SOURCE_BOOTSTRAP=192.168.49.50:9094 scripts/migrate-init.sh
+MIGRATION_ID=<id> scripts/migrate-execute.sh
+```
+
+`migrate-execute.sh` is the whole cutover in one resumable command. KCP drains lag below
+the threshold, applies the **fenced** Gateway CR (clients briefly retry rather than fail),
+promotes the mirror topics at zero lag, then applies the **switchover** CR:
+
+```text
+✔ All topic lags below threshold (0)
+🚧 Fencing gateway...         ✔ Gateway fenced and ready
+📤 Promoting mirror topics... ✔ orders promoted
+🔄 Switching gateway to Confluent Cloud... ✔ Gateway switchover complete
+✅ Migration complete!   Status: switched
+```
+
+Afterward the Gateway log shows its upstream has flipped from the source to
+`lkc-xxxxxxx.<domain>:9092`, the mirror is `STOPPED` (promoted), and `orders` is a normal
+**writable** topic on Confluent Cloud with the migrated consumer-group offsets — while any
+client left running on the Gateway endpoint never restarted.
+
+> The CPC Gateway image and Confluent for Kubernetes (≥ 3.2, which ships the `Gateway`
+> CRD) both pull anonymously from Docker Hub, and the Gateway runs under a Confluent
+> Platform **evaluation** license — so you can run the whole thing without an entitlement.
+
+## Why it matters
+
+Migrating a busy Kafka estate to the cloud usually means a flag day: coordinate every team,
+restart every client against a new address, and hope nothing was missed. The Gateway turns
+that into a single operator action with the clients none the wiser — and source-initiated
+Cluster Linking carries the data, with offsets, in the one direction that private networking
+permits. The part that bites people is the private-DNS override; once that's understood, a
+zero-downtime move onto a fully private Confluent Cloud cluster is a runbook, not a project.
+
+Full code, Terraform, Gateway CRs, and the operator runbook are in the
+[repo](https://github.com/ohad-israeli/zero-cut-migration).
