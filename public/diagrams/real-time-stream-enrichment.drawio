@@ -1,0 +1,25 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="real-time-stream-enrichment" id="rtse">
+    <mxGraphModel dx="1160" dy="520" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1160" pageHeight="520" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="Real-Time Stream Enrichment on Confluent Cloud" style="text;html=1;align=center;fontSize=18;fontStyle=1;fontColor=#e6edf3;" vertex="1" parent="1"><mxGeometry x="230" y="14" width="700" height="30" as="geometry"/></mxCell>
+        <mxCell id="ccz" value="Confluent Cloud" style="rounded=1;strokeColor=#388bfd;fillColor=none;fontColor=#388bfd;verticalAlign=top;fontStyle=1;align=left;spacingLeft=12;spacingTop=8;" vertex="1" parent="1"><mxGeometry x="250" y="150" width="640" height="250" as="geometry"/></mxCell>
+        <mxCell id="src" value="Source connector&#10;(managed)" style="rounded=1;fillColor=#161b22;strokeColor=#30363d;fontColor=#e6edf3;" vertex="1" parent="1"><mxGeometry x="60" y="255" width="150" height="80" as="geometry"/></mxCell>
+        <mxCell id="orders" value="orders topic" style="image;html=1;verticalLabelPosition=bottom;verticalAlign=top;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;fontColor=#e6edf3;" vertex="1" parent="1"><mxGeometry x="300" y="265" width="60" height="60" as="geometry"/></mxCell>
+        <mxCell id="flink" value="Flink SQL — enrich per event" style="image;html=1;verticalLabelPosition=bottom;verticalAlign=top;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apacheflink.svg;fontColor=#e6edf3;" vertex="1" parent="1"><mxGeometry x="480" y="265" width="60" height="60" as="geometry"/></mxCell>
+        <mxCell id="enriched" value="enriched topic" style="image;html=1;verticalLabelPosition=bottom;verticalAlign=top;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;fontColor=#e6edf3;" vertex="1" parent="1"><mxGeometry x="700" y="265" width="60" height="60" as="geometry"/></mxCell>
+        <mxCell id="api" value="Internal API + AI model&#10;(live lookups / inference)" style="rounded=1;fillColor=#161b22;strokeColor=#ffb454;fontColor=#e6edf3;" vertex="1" parent="1"><mxGeometry x="455" y="60" width="210" height="66" as="geometry"/></mxCell>
+        <mxCell id="opsink" value="Operational sink connector" style="rounded=1;fillColor=#161b22;strokeColor=#30363d;fontColor=#e6edf3;" vertex="1" parent="1"><mxGeometry x="955" y="205" width="150" height="66" as="geometry"/></mxCell>
+        <mxCell id="lake" value="Tableflow → Iceberg lakehouse" style="rounded=1;fillColor=#161b22;strokeColor=#30363d;fontColor=#e6edf3;" vertex="1" parent="1"><mxGeometry x="955" y="315" width="150" height="66" as="geometry"/></mxCell>
+        <mxCell id="e1" value="bootstrap" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#388bfd;fontColor=#9da7b3;endArrow=block;" edge="1" parent="1" source="src" target="orders"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#ffb454;endArrow=block;" edge="1" parent="1" source="orders" target="flink"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" value="per-event lookup" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#ffb454;fontColor=#9da7b3;endArrow=block;startArrow=block;" edge="1" parent="1" source="flink" target="api"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#3fb950;endArrow=block;" edge="1" parent="1" source="flink" target="enriched"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#3fb950;endArrow=block;" edge="1" parent="1" source="enriched" target="opsink"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#3fb950;endArrow=block;" edge="1" parent="1" source="enriched" target="lake"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
