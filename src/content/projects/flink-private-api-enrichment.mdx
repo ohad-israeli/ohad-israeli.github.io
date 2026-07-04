@@ -1,0 +1,122 @@
+---
+title: "Enriching Kafka Streams from a Private API with Flink SQL"
+description: "The hands-on build behind real-time stream enrichment: call a private internal REST API per event from Confluent Cloud for Apache Flink — over PrivateLink, with a few SQL statements and no pipeline code."
+date: 2026-07-04
+tags: ["confluent-cloud", "apache-flink", "flink-sql", "privatelink", "data-enrichment", "aws", "kafka"]
+repo: "https://github.com/ohad-israeli/flink-private-api-enrichment"
+status: "active"
+draft: false
+---
+
+This is the hands-on follow-up to
+[Real-Time Stream Enrichment on Confluent Cloud](/projects/real-time-stream-enrichment).
+There we made the case; here we build the core of it: enriching an order stream, per event,
+with live data from a **private** Customer-360 API — using nothing but Flink SQL and managed
+connectors.
+
+## The shape of it
+
+Orders arrive on a topic. For each order, Flink looks up the customer in an **internal
+Customer-360 API that has no public endpoint** — it lives privately inside the company's own
+cloud network — and attaches the loyalty tier, lifetime value, and status. The enriched
+stream then feeds the marketing system and the lakehouse. No consumer app, no service to run.
+
+<figure>
+  <img
+    src="/diagrams/flink-private-api-enrichment.svg"
+    alt="An orders Kafka topic is read by Confluent Cloud for Apache Flink; a Flink SQL external table backed by a REST connection calls a private Customer-360 API over AWS PrivateLink to enrich each order; the enriched stream is written to an enriched_orders topic and out to sinks."
+  />
+  <figcaption>
+    Per order, Flink SQL calls the private Customer-360 API over PrivateLink and emits an
+    enriched record. Editable source:
+    <a href="/diagrams/flink-private-api-enrichment.drawio">flink-private-api-enrichment.drawio</a>.
+  </figcaption>
+</figure>
+
+## Try it yourself
+
+The [repo](https://github.com/ohad-israeli/flink-private-api-enrichment) provisions the whole
+thing with Terraform: a Confluent Cloud cluster + Flink compute pool, and — standing in for a
+real internal service — a small **Customer-360 API** running privately in an AWS VPC behind an
+internal load balancer, reachable only over PrivateLink. The streaming pipeline itself is
+pure SQL and connector config; the only code in the repo is the mock API.
+
+## The key piece: a per-event lookup to a private API
+
+Two ideas do the work. First, a **connection** and an **external table** turn the REST API
+into something Flink SQL can query:
+
+```sql
+-- The private API as a secured Flink connection (HTTPS + bearer token):
+CREATE CONNECTION customer_api WITH (
+  'type'     = 'rest',
+  'endpoint' = 'https://customer-api.internal.example/customers',
+  'token'    = '<bearer-token>'
+);
+
+-- An external table over that connection: first column is the request key,
+-- the rest map to the JSON response fields.
+CREATE TABLE customer_lookup (
+  customer_id    STRING,
+  customer_name  STRING,
+  account_tier   STRING,
+  lifetime_value DOUBLE,
+  is_active      BOOLEAN
+) WITH (
+  'connector'       = 'rest',
+  'rest.connection' = 'customer_api',
+  'rest.method'     = 'GET'
+);
+```
+
+Second, **`KEY_SEARCH_AGG`** does a per-row key lookup against that table — an asynchronous,
+batched, retrying call to the API for each event, without a line of imperative code:
+
+```sql
+SELECT o.order_id, o.product, o.amount,
+       c.customer_name, c.account_tier, c.lifetime_value
+FROM orders AS o,
+LATERAL TABLE(KEY_SEARCH_AGG(customer_lookup, DESCRIPTOR(customer_id), o.customer_id));
+```
+
+### Reaching a private endpoint over PrivateLink
+
+The API is private, so Flink reaches it over **AWS Egress PrivateLink** — and the direction
+is the part worth remembering: **you publish your API as an AWS VPC Endpoint Service**
+(fronted by an internal NLB) and **authorize Confluent's egress gateway to connect to it**.
+Confluent then attaches a private endpoint, and a Confluent **DNS record** maps your API's
+hostname to it, so Flink resolves that hostname to the private endpoint instead of the public
+internet. One detail that saves a support ticket: the REST connection requires **HTTPS with a
+valid certificate**, so the endpoint is served with a normal TLS cert (and the bearer token
+locks it down at the application layer on top of the private network). Terraform for all of
+this — gateway, access point, DNS record, and the endpoint service — is in the repo.
+
+## Running it
+
+Point the connection at your API, create the external table, and run the lookup. Against the
+demo's Customer-360 service, the enrichment returns live data per key — the API was called
+privately, over PrivateLink, for each row:
+
+```text
+customer_id  customer_name   account_tier  lifetime_value  is_active
+1            Customer 1      PLATINUM       4273.15         true
+2            Customer 2      SILVER         1648.61         true
+42           Customer 42     SILVER          943.53         true
+7            Customer 7      SILVER          194.49         true
+```
+
+From here the rest of the pipeline is the same declarative style: write the enriched rows to
+an `enriched_orders` topic, add an AI-generated offer with a model inference function, and
+fan out through a managed sink connector and Tableflow — each a statement or a config, not a
+service.
+
+## Why it matters
+
+The hard part of real-time enrichment has always been the operational weight of calling your
+own systems, per event, at stream speed — and doing it safely against services that aren't
+public. `KEY_SEARCH_AGG` over a REST connection turns that into declarative SQL, and Egress
+PrivateLink keeps the call inside your private network. What used to be a bespoke,
+always-on service is a query.
+
+Full Terraform, SQL, and the mock API are in the
+[repo](https://github.com/ohad-israeli/flink-private-api-enrichment).

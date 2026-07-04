@@ -1,0 +1,85 @@
+---
+title: "Real-Time Stream Enrichment on Confluent Cloud — Without the Pipeline Code"
+description: "Raw events rarely carry enough context to act on. Here's how to enrich every event in flight with live business data and AI — declaratively, with managed connectors and Flink SQL, no stream-processing app to build or run."
+date: 2026-07-04
+tags: ["confluent-cloud", "apache-flink", "stream-processing", "data-enrichment", "ai", "kafka"]
+status: "active"
+draft: false
+---
+
+## The business problem
+
+Every business runs on a stream of events — orders, payments, clicks, shipments, sensor
+readings. The problem is that a raw event is thin. An order says *customer 4821 bought
+SKU 12 for $89*. To actually **do** something the moment it happens — greet a
+high-value customer differently, flag a risky transaction, promise an accurate delivery
+date, make a personalized offer — you need to fuse that event with **live context** that
+lives somewhere else: the customer's loyalty tier and lifetime value, current inventory,
+a risk score, a model's prediction.
+
+Doing that enrichment *in real time* has traditionally meant building and operating a
+**stream-processing application**: stand up consumers, call out to internal services,
+manage state and retries, handle schema changes, scale it, keep it up at 3 a.m. Every new
+enrichment is another service to own. The result is that most teams give up and push the
+work to a nightly batch job — and the moment to act has already passed.
+
+## What Confluent Cloud changes
+
+On Confluent Cloud the enrichment becomes **declarative**. The events already flow through
+Kafka; you describe the enrichment in **Flink SQL**, and Confluent runs it for you — no
+application to build, deploy, or operate. The whole path, end to end, is configuration:
+
+- **Get the events in** with a fully-managed **source connector** (a database via CDC, a
+  SaaS app, an existing topic) — no connector code.
+- **Enrich in flight with Flink SQL.** Join the stream to reference data, and — this is
+  the part that removes the most custom code — **look up live data from your own systems
+  and services per event**, including calling an internal REST API or running **AI model
+  inference** (a hosted LLM, a fraud model) right inside the query.
+- **Govern it automatically** with Schema Registry, data contracts, and lineage, so the
+  enriched stream is trustworthy and discoverable.
+- **Deliver everywhere** with fully-managed **sink connectors** to operational systems,
+  and **Tableflow** to expose the enriched stream as open **Apache Iceberg** tables for
+  analytics — no ETL.
+
+<figure>
+  <img
+    src="/diagrams/real-time-stream-enrichment.svg"
+    alt="Raw events arrive in a Kafka topic via a fully-managed source connector; Confluent Cloud for Apache Flink enriches each event with live context from an internal API and an AI model; the enriched stream is governed by Schema Registry and delivered by managed sink connectors to operational systems and, via Tableflow, as Apache Iceberg tables for analytics."
+  />
+  <figcaption>
+    Managed source → enrich in Flink SQL (live lookups + AI) → governed, enriched stream →
+    managed sinks + Tableflow to the lakehouse. All declarative — no stream app to run.
+  </figcaption>
+</figure>
+
+## A concrete example: orders into decisions
+
+Take an online retailer. Orders land on a topic. The business wants every order, the
+instant it arrives, turned into a **personalized action** — enriched with the customer's
+loyalty tier and lifetime value from the internal Customer-360 service, then handed to a
+language model that writes a tailored offer — and the enriched result delivered to the
+marketing platform and the analytics lakehouse.
+
+In the old model that's a bespoke consumer app plus an integration to the Customer-360
+service plus an LLM integration plus two delivery pipelines — all to build and run. On
+Confluent Cloud it's a handful of SQL statements over managed connectors:
+
+- the order stream is enriched, per event, with a **live call to the Customer-360 API**;
+- an **AI model** turns the enriched order into a personalized offer;
+- the result flows out through managed sinks and Tableflow.
+
+No stream-processing service is written or operated. And because the enrichment runs
+inside Confluent Cloud, sensitive customer data can be reached over **private
+networking** — it never has to touch the public internet.
+
+## Why it matters
+
+Real-time enrichment is where streaming data stops being plumbing and starts driving
+decisions. Making it **declarative** collapses the time from "we have the events" to "we
+act on them" from a quarter-long engineering project to an afternoon of SQL — and removes
+the operational tax of yet another service to keep alive. The same pattern powers fraud
+scoring, dynamic pricing, logistics ETAs, and customer 360s.
+
+**Part 2 is the hands-on build:** enriching an order stream from a **private** Customer-360
+API with Flink SQL — the exact statements, and the live result. →
+[Enriching Kafka Streams from a Private API with Flink SQL](/projects/flink-private-api-enrichment)
