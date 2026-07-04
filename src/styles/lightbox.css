@@ -1,0 +1,66 @@
+/* ---------- Image lightbox (click article images to zoom) ----------
+   Shared across themes. Article images (diagrams, screenshots) are small in-flow
+   for layout but often dense; click to open a full-viewport, readable view. */
+
+.prose figure img,
+.prose > img,
+.prose p > img {
+  cursor: zoom-in;
+}
+
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2.5vmin;
+  background: rgba(6, 8, 12, 0.92);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 180ms ease;
+  cursor: zoom-out;
+}
+.lightbox-overlay.is-open {
+  opacity: 1;
+}
+
+.lightbox-overlay img {
+  max-width: 95vw;
+  max-height: 88vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  /* white matte so transparent/dark SVG diagrams stay legible on the dark backdrop */
+  background: #fff;
+  padding: 1.25rem;
+}
+
+.lightbox-caption {
+  max-width: 80ch;
+  margin: 0;
+  color: #cfd6e2;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.lightbox-hint {
+  position: fixed;
+  top: 1rem;
+  right: 1.25rem;
+  color: #9aa3b2;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox-overlay {
+    transition: none;
+  }
+}

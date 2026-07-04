@@ -2,6 +2,7 @@
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import '../styles/global.css';
+import '../styles/lightbox.css';
 
 interface Props {
   title: string;
@@ -66,5 +67,40 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       </div>
     </main>
     <Footer />
+
+    <!-- Click article images to open a full-viewport, readable view. -->
+    <script is:inline>
+      (() => {
+        const imgs = document.querySelectorAll('.prose figure img, .prose > img, .prose p > img');
+        if (!imgs.length) return;
+        let overlay;
+        const close = () => {
+          if (!overlay) return;
+          overlay.classList.remove('is-open');
+          const o = overlay;
+          setTimeout(() => o.remove(), 180);
+          overlay = null;
+          document.removeEventListener('keydown', onKey);
+        };
+        const onKey = (e) => { if (e.key === 'Escape') close(); };
+        const open = (src, alt) => {
+          overlay = document.createElement('div');
+          overlay.className = 'lightbox-overlay';
+          overlay.innerHTML =
+            '<span class="lightbox-hint">esc / click to close</span>' +
+            '<img src="' + src + '" alt="' + (alt || '') + '" />' +
+            (alt ? '<p class="lightbox-caption"></p>' : '');
+          if (alt) overlay.querySelector('.lightbox-caption').textContent = alt;
+          overlay.addEventListener('click', close);
+          document.body.appendChild(overlay);
+          requestAnimationFrame(() => overlay.classList.add('is-open'));
+          document.addEventListener('keydown', onKey);
+        };
+        imgs.forEach((img) => {
+          img.setAttribute('loading', 'lazy');
+          img.addEventListener('click', () => open(img.currentSrc || img.src, img.alt));
+        });
+      })();
+    </script>
   </body>
 </html>
