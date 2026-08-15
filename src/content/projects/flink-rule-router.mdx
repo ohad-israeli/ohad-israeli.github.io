@@ -14,10 +14,10 @@ Picture the alerting feature almost every data platform ends up building: a
 customer defines a rule — flag a login from a new country, tell me when this
 metric crosses a threshold, catch any transaction shaped like fraud — and the
 platform is supposed to tell them the moment it happens. Security tools do
-this. Observability platforms do this. Fraud and risk systems do this. And
-under the hood, most of them solve it the same way: land the incoming events
-in an analytical data store, and re-run every customer's rules against it on
-a timer — every few seconds, every minute, whatever the schedule allows.
+this. Observability platforms do this. Fraud and risk systems do this. A
+common way teams solve it: land the incoming events in an analytical data
+store, and re-run every customer's rules against it on a timer — every few
+seconds, every minute, whatever the schedule allows.
 
 That's a perfectly reasonable way to start. It's also a design with two
 questions built into it that eventually catch up with every system built this
