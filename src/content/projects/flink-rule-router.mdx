@@ -1,0 +1,151 @@
+---
+title: "Real-Time Per-Tenant Alerting with Flink Broadcast State"
+description: "Replacing scheduled analytical-store queries with a Confluent Platform for Flink pipeline that matches every event against only its own tenant's rules, the moment it arrives."
+date: 2026-08-15
+tags: ["flink", "confluent-platform-for-flink", "kafka", "broadcast-state", "real-time-alerting"]
+repo: "https://github.com/ohad-israeli/flink-rule-router"
+status: "active"
+draft: false
+---
+
+## The business problem
+
+A lot of per-tenant alerting — a SIEM flagging a customer's security events, an
+observability platform evaluating a customer's threshold alerts, a fraud
+platform scoring a customer's transactions — is built the same way under the
+hood: a scheduled query against an analytical data store, re-run every few
+seconds or minutes against whatever landed since the last run. It works, but
+it's pull-based and it doesn't scale the way the business does. Detection
+latency is capped by the poll interval, not by how fast the event actually
+arrived. And every poll re-scans the same window of data against the same
+(growing) set of rules — thousands of rules means thousands of query
+evaluations against the same data, on every cycle, forever.
+
+The system this was built against is a real case of that pattern: a security
+platform filtering a multi-region firehose (**2.4 GB/s, 50–100M events/day**)
+against **per-customer detection rules** — 3–20 active rules per customer,
+~15,000 per region and growing — by polling Azure Data Explorer (Kusto) every
+few seconds. That design adds multi-second latency before a match reaches a
+customer, and re-queries the same landed data on every cycle regardless of how
+many rules are actually active.
+
+The fix isn't a bigger analytics cluster — it's not querying after the fact at
+all. **Confluent Platform for Flink** evaluates every event against a
+customer's rules **the moment it arrives**, in-stream, and only Confluent
+Cloud sizing/cost tracks the *filtered* output — not the raw firehose. Adding
+a rule, changing one, or onboarding a new tenant becomes a message into
+running state, not a query change or a redeploy.
+
+<figure>
+  <img
+    src="/diagrams/flink-rule-router.svg"
+    alt="A Flink Application on Confluent Platform for Flink consumes blob-notification URIs from a self-managed Kafka topic, fetches event content asynchronously and directly from blob storage, keys the stream by customerId, and matches each event against that customer's own rules held in RocksDB-backed broadcast state fed from a Confluent Cloud filter-control topic populated by a predicate compiler. Matches are produced to a single Confluent Cloud matches topic tagged with customerId, ruleId, and logId."
+  />
+  <figcaption>
+    Self-managed Kafka + Flink (Confluent Platform for Flink) for the
+    high-volume side, Confluent Cloud for the low-rate rule/output topics.
+    Editable source:{' '}
+    <a href="/diagrams/flink-rule-router.drawio" download>flink-rule-router.drawio</a>.
+  </figcaption>
+</figure>
+
+## Try it yourself
+
+The [repo](https://github.com/ohad-israeli/flink-rule-router) has the whole
+pipeline: the Flink Application job, a listing connector that publishes only
+blob *URIs* (never content) so the multi-GB/s firehose never has to land in a
+topic, a predicate compiler that turns a SQL-like `WHERE`-clause into the rule
+JSON the job consumes, and the Kubernetes/Terraform to deploy it all to a real
+Confluent Platform for Flink cluster with Confluent Cloud carrying the
+low-rate rule and output topics. Every module builds and runs independently —
+see the repo's README for the exact commands.
+
+## The key piece
+
+`flink-app`'s core is a `KeyedBroadcastProcessFunction`, keyed by the event's
+`customerId`, holding each customer's compiled rules in RocksDB-backed
+broadcast state:
+
+```java
+BroadcastStream<RuleUpdate> ruleUpdates = env
+    .fromSource(filterControlSource, WatermarkStrategy.noWatermarks(), "filter-control")
+    .broadcast(CustomerScopedRuleMatchFunction.RULES_STATE_DESCRIPTOR);
+
+DataStream<Match> matches = events
+    .keyBy(RawEvent::getCustomerId)
+    .connect(ruleUpdates)
+    .process(new CustomerScopedRuleMatchFunction());
+```
+
+Keying by `customerId` is what turns "check every event against the *entire*
+rule set" into "check every event against *only its own customer's* 3–20
+active rules" — regardless of how many other customers' rules are sitting in
+the same job's broadcast state. Toggling a rule, editing one, or onboarding a
+new customer is just another message on `filter-control`; the broadcast
+function's `processBroadcastElement` updates one entry in a
+`Map<customerId, List<CompiledRule>>` — no redeploy, no savepoint, no schema
+migration.
+
+The other half that makes this viable at the source's actual throughput:
+fetching each event's content is a `RichAsyncFunction`
+(`AsyncDataStream.unorderedWait`), not a blocking map. A synchronous
+fetch-per-record blocks its subtask for the full network round-trip and caps
+throughput around 1,200–3,000 events/min per subtask, regardless of how fast
+upstream listing runs — nowhere near the volume this needed to clear.
+
+## Running it
+
+```bash
+cd flink-app && mvn package                       # -> target/filter-route-job.jar
+mvn install -DskipTests                           # required once, for predicate-compiler's cross-validation test
+cd ../predicate-compiler && mvn package            # -> target/predicate-compiler.jar
+
+# publish a rule
+java -jar target/predicate-compiler.jar \
+  --customer-id cust-1 --rule-id rule-1 \
+  --bootstrap-servers localhost:9092 --topic filter-control \
+  --where "region = 'us-east'"
+```
+
+`cmf-deploy/` packages the same jar as a real `FlinkApplication` custom
+resource for Confluent Platform for Flink on Kubernetes; `terraform/` and
+`terraform-confluent-cloud/` stand up the AKS/CMF cluster and the Confluent
+Cloud environment respectively. The repo README has the full path from a
+laptop-only test to the real deployment.
+
+## Results
+
+Everything below ran against a real Confluent Platform for Flink deployment
+on AKS and a real Confluent Cloud cluster — not a local dev cluster standing
+in for both:
+
+- **Load test**: 100,000 events end-to-end at parallelism 1 — one subtask, no
+  scale-out — sustained **~105,600 events/min**, comfortably clearing the
+  34,700–69,400/min target, with zero loss.
+- **Failure recovery**: killed the running TaskManager mid-batch. Kubernetes
+  rescheduled it automatically; the job resumed from its last checkpoint with
+  **zero data loss** — every in-flight match redelivered exactly once, the
+  expected at-least-once behavior of rewinding to a checkpoint, not a bug.
+- **Rule scale**: 3,372 rules across 300 customers loaded into one job's
+  broadcast state. 30 sampled customers, each matched against exactly their
+  own rule — **30/30 correct**, and none of the ~3,072 decoy rules in the same
+  state ever fired for the wrong customer.
+- **Savepoint upgrade**: triggered a planned upgrade with that same
+  3,372-rule state loaded. The new job matched a customer's event correctly
+  **without republishing a single rule** — the whole broadcast state survived
+  the upgrade intact.
+
+## Why it matters
+
+The pattern here generalizes past this one pipeline: any per-tenant rule or
+alert evaluation that's currently implemented as a scheduled query against an
+analytical store — a SIEM, an observability platform, a fraud engine, an IoT
+alerting system — can move from "detect on the next poll cycle" to "detect
+the moment the event arrives," without the query cost of re-scanning growing
+history on every cycle. Confluent Platform for Flink's broadcast state does
+the part that's usually the hard sell in that move: keeping thousands of
+independent, frequently-changing rule sets live in one job, cheaply, without
+a redeploy on every change.
+
+Full code, configs, and deployment assets are in the
+[repo](https://github.com/ohad-israeli/flink-rule-router).

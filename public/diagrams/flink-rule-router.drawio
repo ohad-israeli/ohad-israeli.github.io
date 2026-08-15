@@ -1,0 +1,77 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="flink-rule-router" id="flink-rule-router-diagram">
+    <mxGraphModel dx="1300" dy="650" grid="1" gridSize="10" guides="1" tooltips="1"
+        connect="1" arrows="1" fold="1" page="1" pageScale="1"
+        pageWidth="1220" pageHeight="720" math="0" shadow="0" background="#0d1117">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="Real-Time Per-Tenant Rule Matching with Flink Broadcast State" style="text;html=1;fontColor=#e6edf3;fontSize=17;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="360" y="10" width="500" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="Confluent Platform for Flink (self-managed) + Confluent Cloud" style="text;html=1;fontColor=#9da7b3;fontSize=11;align=center;" vertex="1" parent="1">
+          <mxGeometry x="360" y="34" width="500" height="18" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="blob" value="Blob storage&#10;source-events&#10;2.4 GB/s raw ingest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#9da7b3;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="130" width="170" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="predcompiler" value="Predicate compiler&#10;WHERE-clause -&gt; rule JSON&#10;(rule-authoring stand-in)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#9da7b3;fontColor=#e6edf3;fontSize=10.5;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="260" width="170" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cmfzone" value="Confluent Platform for Flink (CMF) &#8226; self-managed on Kubernetes" style="rounded=1;dashed=1;dashPattern=7 5;strokeColor=#ff9900;fillColor=none;fontColor=#ff9900;verticalAlign=top;fontStyle=1;fontSize=11;align=left;spacingLeft=16;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="260" y="90" width="560" height="480" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="listingconn" value="Listing connector&#10;publishes URI only,&#10;never blob content" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#9da7b3;fontColor=#e6edf3;fontSize=10.5;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="290" y="180" width="180" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="blobnotif" value="blob-notifications&#10;~0.01% of raw volume" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=10.5;verticalAlign=middle;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;imageAlign=left;imageWidth=24;imageHeight=24;spacingLeft=28;" vertex="1" parent="1">
+          <mxGeometry x="290" y="290" width="180" height="66" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="flinkapp" value="Flink Application" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#ffb454;fontColor=#e6edf3;fontSize=12;verticalAlign=top;align=left;spacingLeft=40;spacingTop=10;fontStyle=1;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apacheflink.svg;imageAlign=left;imageWidth=26;imageHeight=26;" vertex="1" parent="1">
+          <mxGeometry x="530" y="160" width="250" height="350" as="geometry"/>
+        </mxCell>
+        <mxCell id="flink-keyby" value="keyBy(customerId)&#10;async blob content fetch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="544" y="240" width="222" height="52" as="geometry"/>
+        </mxCell>
+        <mxCell id="flink-broadcast" value="Broadcast rule state&#10;RocksDB, per customerId&#10;match only against that tenant's 3-20 active rules" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=10;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/rocksdb.svg;imageAlign=left;imageWidth=20;imageHeight=20;spacingLeft=24;" vertex="1" parent="1">
+          <mxGeometry x="544" y="300" width="222" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="flink-ckpt" value="checkpointing&#10;RocksDB incremental, unaligned" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="544" y="376" width="222" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="flink-ckptstorage" value="checkpoint storage&#10;Azure Blob (wasbs://)&#10;+ periodic savepoints" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="544" y="428" width="222" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cczone" value="Confluent Cloud (managed)" style="rounded=1;strokeColor=#388bfd;fillColor=none;fontColor=#388bfd;verticalAlign=top;fontStyle=1;fontSize=11;align=left;spacingLeft=16;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="900" y="190" width="280" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="filtercontrol" value="filter-control&#10;low-rate, rule updates" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=10.5;verticalAlign=middle;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;imageAlign=left;imageWidth=22;imageHeight=22;spacingLeft=26;" vertex="1" parent="1">
+          <mxGeometry x="930" y="240" width="220" height="66" as="geometry"/>
+        </mxCell>
+        <mxCell id="matches" value="matches&#10;tagged customerId, ruleId, logId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=10.5;verticalAlign=middle;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;imageAlign=left;imageWidth=22;imageHeight=22;spacingLeft=26;" vertex="1" parent="1">
+          <mxGeometry x="930" y="360" width="220" height="74" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="caption" value="Only a URI notification and the filtered match set ever reach Kafka. Blob content never lands in a topic; matching is scoped to each event's own tenant, never the full rule set loaded into the job. Adding a rule, editing one, or onboarding a new tenant is a message into broadcast state -- never a redeploy." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#57606a;fontColor=#9da7b3;fontSize=10;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="624" width="1140" height="72" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9da7b3;endArrow=block;html=1;" edge="1" source="blob" target="listingconn" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="publish URI" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;" edge="1" source="listingconn" target="blobnotif" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" value="consume" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;" edge="1" source="blobnotif" target="flinkapp" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" value="fetch content directly - async, on demand, never through Kafka" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#9da7b3;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=0;exitY=0.9;entryX=1;entryY=0.5;" edge="1" source="flinkapp" target="blob" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" value="publish compiled rule" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=1;exitY=0.3;entryX=0;entryY=0.5;" edge="1" source="predcompiler" target="filtercontrol" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" value="broadcast" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#388bfd;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" source="filtercontrol" target="flink-broadcast" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" value="produce" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#388bfd;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=1;exitY=0.9;entryX=0;entryY=0.5;" edge="1" source="flinkapp" target="matches" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
