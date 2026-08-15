@@ -10,31 +10,41 @@ draft: false
 
 ## The business problem
 
-A lot of per-tenant alerting — a SIEM flagging a customer's security events, an
-observability platform evaluating a customer's threshold alerts, a fraud
-platform scoring a customer's transactions — is built the same way under the
-hood: a scheduled query against an analytical data store, re-run every few
-seconds or minutes against whatever landed since the last run. It works, but
-it's pull-based and it doesn't scale the way the business does. Detection
-latency is capped by the poll interval, not by how fast the event actually
-arrived. And every poll re-scans the same window of data against the same
-(growing) set of rules — thousands of rules means thousands of query
-evaluations against the same data, on every cycle, forever.
+Picture the alerting feature almost every data platform ends up building: a
+customer defines a rule — flag a login from a new country, tell me when this
+metric crosses a threshold, catch any transaction shaped like fraud — and the
+platform is supposed to tell them the moment it happens. Security tools do
+this. Observability platforms do this. Fraud and risk systems do this. And
+under the hood, most of them solve it the same way: land the incoming events
+in an analytical data store, and re-run every customer's rules against it on
+a timer — every few seconds, every minute, whatever the schedule allows.
 
-The system this was built against is a real case of that pattern: a security
-platform filtering a multi-region firehose (**2.4 GB/s, 50–100M events/day**)
-against **per-customer detection rules** — 3–20 active rules per customer,
-~15,000 per region and growing — by polling Azure Data Explorer (Kusto) every
-few seconds. That design adds multi-second latency before a match reaches a
-customer, and re-queries the same landed data on every cycle regardless of how
-many rules are actually active.
+That's a perfectly reasonable way to start. It's also a design with two
+questions built into it that eventually catch up with every system built this
+way: **is it scalable, and is it cost-effective?** Scalability breaks down
+because detection latency is set by the poll interval, not by when the event
+actually happened — a rule can only fire as fast as the next scheduled query
+runs, no faster. Cost breaks down because every poll re-scans the same landed
+data against the same, growing set of rules — double the customers or double
+the rule count, and the query engine is doing double the work on every single
+cycle, forever, whether or not anything actually matched.
 
-The fix isn't a bigger analytics cluster — it's not querying after the fact at
-all. **Confluent Platform for Flink** evaluates every event against a
-customer's rules **the moment it arrives**, in-stream, and only Confluent
-Cloud sizing/cost tracks the *filtered* output — not the raw firehose. Adding
-a rule, changing one, or onboarding a new tenant becomes a message into
-running state, not a query change or a redeploy.
+The system this project is built around is a real version of that pattern: a
+platform ingesting a genuinely large, continuous stream of events — the kind
+of pipeline where the input stops being worth describing in "events per
+second" and starts being worth describing in **gigabytes per second** —
+evaluating each customer's own detection rules against it by repeatedly
+querying an analytical store. Reasonable place to start; not where it ends up
+working at scale, once traffic, customer count, and rule count are all
+climbing at the same time.
+
+The fix isn't a bigger analytics cluster running the same queries faster —
+it's not querying after the fact at all. **Confluent Platform for Flink**
+evaluates every event against a customer's rules **the moment it arrives**,
+in-stream, and Confluent Cloud only ever has to size and bill for the
+*filtered* output, not the raw firehose. Adding a rule, changing one, or
+onboarding a new tenant becomes a message into already-running state, not a
+query change and not a redeploy.
 
 <figure>
   <img
@@ -121,7 +131,7 @@ in for both:
 
 - **Load test**: 100,000 events end-to-end at parallelism 1 — one subtask, no
   scale-out — sustained **~105,600 events/min**, comfortably clearing the
-  34,700–69,400/min target, with zero loss.
+  required throughput target with zero loss.
 - **Failure recovery**: killed the running TaskManager mid-batch. Kubernetes
   rescheduled it automatically; the job resumed from its last checkpoint with
   **zero data loss** — every in-flight match redelivered exactly once, the

@@ -15,11 +15,11 @@
         </mxCell>
 
         <mxCell id="blob" value="Blob storage&#10;source-events&#10;2.4 GB/s raw ingest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#9da7b3;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="40" y="130" width="170" height="90" as="geometry"/>
+          <mxGeometry x="40" y="170" width="170" height="90" as="geometry"/>
         </mxCell>
 
         <mxCell id="predcompiler" value="Predicate compiler&#10;WHERE-clause -&gt; rule JSON&#10;(rule-authoring stand-in)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#9da7b3;fontColor=#e6edf3;fontSize=10.5;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="40" y="260" width="170" height="90" as="geometry"/>
+          <mxGeometry x="930" y="80" width="220" height="90" as="geometry"/>
         </mxCell>
 
         <mxCell id="cmfzone" value="Confluent Platform for Flink (CMF) &#8226; self-managed on Kubernetes" style="rounded=1;dashed=1;dashPattern=7 5;strokeColor=#ff9900;fillColor=none;fontColor=#ff9900;verticalAlign=top;fontStyle=1;fontSize=11;align=left;spacingLeft=16;spacingTop=8;" vertex="1" parent="1">
@@ -30,7 +30,7 @@
           <mxGeometry x="290" y="180" width="180" height="70" as="geometry"/>
         </mxCell>
 
-        <mxCell id="blobnotif" value="blob-notifications&#10;~0.01% of raw volume" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=10.5;verticalAlign=middle;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;imageAlign=left;imageWidth=24;imageHeight=24;spacingLeft=28;" vertex="1" parent="1">
+        <mxCell id="blobnotif" value="blob-notifications&#10;tiny fraction of raw volume" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=10.5;verticalAlign=middle;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;imageAlign=left;imageWidth=24;imageHeight=24;spacingLeft=28;" vertex="1" parent="1">
           <mxGeometry x="290" y="290" width="180" height="66" as="geometry"/>
         </mxCell>
 
@@ -40,7 +40,7 @@
         <mxCell id="flink-keyby" value="keyBy(customerId)&#10;async blob content fetch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="544" y="240" width="222" height="52" as="geometry"/>
         </mxCell>
-        <mxCell id="flink-broadcast" value="Broadcast rule state&#10;RocksDB, per customerId&#10;match only against that tenant's 3-20 active rules" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=10;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/rocksdb.svg;imageAlign=left;imageWidth=20;imageHeight=20;spacingLeft=24;" vertex="1" parent="1">
+        <mxCell id="flink-broadcast" value="Broadcast rule state&#10;RocksDB, per customerId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=10;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/rocksdb.svg;imageAlign=left;imageWidth=20;imageHeight=20;spacingLeft=24;" vertex="1" parent="1">
           <mxGeometry x="544" y="300" width="222" height="60" as="geometry"/>
         </mxCell>
         <mxCell id="flink-ckpt" value="checkpointing&#10;RocksDB incremental, unaligned" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=10;" vertex="1" parent="1">
@@ -64,11 +64,11 @@
           <mxGeometry x="40" y="624" width="1140" height="72" as="geometry"/>
         </mxCell>
 
-        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9da7b3;endArrow=block;html=1;" edge="1" source="blob" target="listingconn" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9da7b3;endArrow=block;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="blob" target="listingconn" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e2" value="publish URI" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;" edge="1" source="listingconn" target="blobnotif" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e3" value="consume" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;" edge="1" source="blobnotif" target="flinkapp" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e4" value="fetch content directly - async, on demand, never through Kafka" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#9da7b3;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=0;exitY=0.9;entryX=1;entryY=0.5;" edge="1" source="flinkapp" target="blob" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e5" value="publish compiled rule" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=1;exitY=0.3;entryX=0;entryY=0.5;" edge="1" source="predcompiler" target="filtercontrol" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" value="publish compiled rule" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" source="predcompiler" target="filtercontrol" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e6" value="broadcast" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#388bfd;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" source="filtercontrol" target="flink-broadcast" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e7" value="produce" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#388bfd;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=1;exitY=0.9;entryX=0;entryY=0.5;" edge="1" source="flinkapp" target="matches" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
       </root>
