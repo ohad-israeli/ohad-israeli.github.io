@@ -107,30 +107,23 @@ constraining each field to a realistic set of values:
 That's a real Iceberg table on real object storage, queried over a real REST
 catalog endpoint — with zero pipeline code between the topic and the query.
 
-## A real gotcha with schema evolution
+## Schema evolution — one specific rule to follow
 
 Schemas change. The repo's Avro schema is versioned (`orders_schema_version
-= 1` or `2`) so this is easy to reproduce: version 2 adds a `region` field
-with a default, a backward-compatible Avro change that Schema Registry
-accepts without complaint, and the running connector picks it up as an
-in-place config update.
+= 1` or `2`) to make this reproducible: version 2 adds a `region` field,
+and the running connector picks it up as an in-place config update.
 
-What actually happened when this was tested against the real deployment: the
-schema change was accepted and the connector kept running healthy — but the
-Tableflow topic's materialization paused immediately after. **Tableflow's
-default `error_handling.mode` is `SUSPEND`**: a materialization failure
-pauses the whole table rather than skipping the bad record. It's the right
-default to ship — silently corrupting a table is worse than stopping — but
-it means a routine, backward-compatible schema change can look exactly like
-an outage if `error_handling.mode` isn't set explicitly first:
-
-```hcl
-error_handling {
-  mode = "LOG" # dead-letter failures instead of suspending the whole table
-}
-```
-
-Worth knowing before a schema changes in production, not after.
+Tableflow's documented evolution rule is more specific than plain Schema
+Registry compatibility: a new field must be **nullable, with a default of
+`null`** — not just *has a default*, which is all Schema Registry's own
+BACKWARD compatibility check requires. Get that shape right and it's
+uneventful: verified against a real deployment, the table never suspends and
+the new column shows up with real values on the next batch of records. Get
+it wrong — a non-null default is technically valid, BACKWARD-compatible
+Avro, but not what Tableflow's evolution rule allows — and materialization
+pauses the whole table rather than partially applying it. Worth checking a
+schema change against that specific rule before assuming
+'Schema-Registry-compatible' is the whole story.
 
 ## Why it matters
 
