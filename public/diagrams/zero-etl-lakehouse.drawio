@@ -1,0 +1,57 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="zero-etl-lakehouse" id="zero-etl-lakehouse-diagram">
+    <mxGraphModel dx="1300" dy="650" grid="1" gridSize="10" guides="1" tooltips="1"
+        connect="1" arrows="1" fold="1" page="1" pageScale="1"
+        pageWidth="1220" pageHeight="600" math="0" shadow="0" background="#0d1117">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="Zero-ETL to the Lakehouse with Tableflow" style="text;html=1;fontColor=#e6edf3;fontSize=19;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="360" y="12" width="500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="A Kafka topic on Confluent Cloud, materialized directly as a queryable Iceberg table" style="text;html=1;fontColor=#9da7b3;fontSize=12.5;align=center;" vertex="1" parent="1">
+          <mxGeometry x="310" y="38" width="600" height="18" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cczone" value="Confluent Cloud (managed)" style="rounded=1;dashed=1;dashPattern=7 5;strokeColor=#388bfd;fillColor=none;fontColor=#388bfd;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=16;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="680" height="200" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="connector" value="Datagen source connector&#10;produces Avro Order records" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#9da7b3;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="70" y="150" width="160" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="topic" value="orders" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=12;verticalAlign=middle;align=left;spacingLeft=34;fontStyle=1;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;imageAlign=left;imageWidth=24;imageHeight=24;spacingLeft=32;" vertex="1" parent="1">
+          <mxGeometry x="270" y="150" width="170" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="tableflow" value="Tableflow&#10;confluent_tableflow_topic&#10;managed_storage {}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#ffb454;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="150" width="210" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="iceberg" value="Iceberg table&#10;Confluent-managed storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#9da7b3;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="750" y="150" width="190" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="duckdb" value="DuckDB&#10;verified live" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=11.5;verticalAlign=middle;align=left;spacingLeft=32;fontStyle=1;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/duckdb.svg;imageAlign=left;imageWidth=22;imageHeight=22;spacingLeft=30;" vertex="1" parent="1">
+          <mxGeometry x="990" y="110" width="190" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="alsocompat" value="Also Iceberg REST-compatible:&#10;Snowflake, Athena, Trino, Spark" style="rounded=1;dashed=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#57606a;fontColor=#9da7b3;fontSize=10.5;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="990" y="200" width="190" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="caption" value="No Spark or Airflow job reads this topic and writes Parquet anywhere -- Tableflow keeps the Iceberg table's data and metadata in sync with the topic directly. Any Iceberg-aware engine reads it the moment it can reach the REST catalog endpoint -- no pipeline code, no schedule." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#57606a;fontColor=#9da7b3;fontSize=10.5;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="500" width="1140" height="72" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9da7b3;endArrow=block;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="connector" target="topic" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="consume" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="topic" target="tableflow" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" value="materializes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#ffb454;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="tableflow" target="iceberg" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" value="Iceberg REST Catalog" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=1;exitY=0.3;entryX=0;entryY=0.5;" edge="1" source="iceberg" target="duckdb" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#57606a;endArrow=block;html=1;exitX=1;exitY=0.7;entryX=0;entryY=0.5;" edge="1" source="iceberg" target="alsocompat" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,145 @@
+---
+title: "Zero-ETL to the Lakehouse with Tableflow"
+description: "Materializing a Kafka topic directly as a queryable Iceberg table with Confluent Tableflow — no separate pipeline copying data into the lakehouse."
+date: 2026-08-28
+tags: ["tableflow", "confluent-cloud", "kafka", "iceberg", "lakehouse"]
+repo: "https://github.com/ohad-israeli/zero-etl-lakehouse"
+status: "active"
+draft: false
+---
+
+## The business problem
+
+A common way teams get SQL/BI access to streaming data: build a pipeline
+whose only job is copying it somewhere queryable. A scheduled Spark or
+Airflow job reads a Kafka topic, writes Parquet or Iceberg files to object
+storage, and updates a catalog — so an analyst can finally run a `SELECT`
+against data that's already sitting in Kafka. That pipeline needs its own
+compute, its own monitoring, its own on-call story when it falls behind or
+breaks, and it's stale by however long its schedule allows, on top of
+everything the source topic itself already needs.
+
+**Confluent Tableflow** removes that pipeline rather than optimizing it. A
+Kafka topic can be materialized directly as an Iceberg table — no separate
+job reading Kafka and writing object storage, no catalog to keep in sync by
+hand. The topic becomes the table, kept current by Confluent, queryable by
+any Iceberg-aware engine the moment it can reach a REST catalog endpoint.
+
+<figure>
+  <img
+    src="/diagrams/zero-etl-lakehouse.svg"
+    alt="A Datagen source connector produces Avro records to a Kafka topic named orders on Confluent Cloud. Tableflow, configured with managed_storage, materializes that topic directly as an Iceberg table using Confluent-managed storage. DuckDB queries the table live over the Iceberg REST Catalog endpoint; Snowflake, Athena, Trino, and Spark are also REST-catalog compatible."
+  />
+  <figcaption>
+    No Spark or Airflow job in between — Tableflow keeps the Iceberg table in
+    sync with the topic directly. Editable source:{' '}
+    <a href="/diagrams/zero-etl-lakehouse.drawio" download>zero-etl-lakehouse.drawio</a>.
+  </figcaption>
+</figure>
+
+## Try it yourself
+
+The [repo](https://github.com/ohad-israeli/zero-etl-lakehouse) provisions a
+real Confluent Cloud Standard-tier cluster, a topic, a Datagen source
+connector producing Avro records, and a `confluent_tableflow_topic` resource
+enabling Tableflow with Confluent-managed storage — no S3/ADLS bucket of your
+own to provision. A `scripts/query.sh` script queries the resulting table
+with the DuckDB CLI over the Iceberg REST catalog. `terraform apply` /
+`terraform destroy` for the full lifecycle — see the repo's README for the
+exact commands.
+
+## The key idea
+
+Tableflow is a resource you attach to a topic, not a pipeline you build and
+operate:
+
+```hcl
+resource "confluent_tableflow_topic" "orders" {
+  environment   { id = confluent_environment.zero_etl.id }
+  kafka_cluster { id = confluent_kafka_cluster.standard.id }
+  display_name  = confluent_kafka_topic.orders.topic_name
+
+  managed_storage {}
+  table_formats = ["ICEBERG"]
+
+  credentials {
+    key    = confluent_api_key.app-manager-tableflow-api-key.id
+    secret = confluent_api_key.app-manager-tableflow-api-key.secret
+  }
+}
+```
+
+That's the whole thing. No compute cluster to size, no job to schedule, no
+custom code translating Kafka's wire format into Iceberg's. Querying it is
+just as plain — DuckDB, pointed at Confluent's Iceberg REST catalog endpoint:
+
+```sql
+INSTALL iceberg; LOAD iceberg;
+
+CREATE SECRET iceberg_secret (
+  TYPE ICEBERG, CLIENT_ID '<tableflow-api-key>', CLIENT_SECRET '<...>',
+  ENDPOINT '<rest-catalog-endpoint>', OAUTH2_SCOPE 'catalog'
+);
+ATTACH 'warehouse' AS iceberg_catalog (TYPE iceberg, SECRET iceberg_secret, ENDPOINT '<rest-catalog-endpoint>');
+
+SELECT order_id, customer_id, amount, currency
+FROM iceberg_catalog."<kafka_cluster_id>"."orders"
+ORDER BY "$$timestamp" DESC LIMIT 10;
+```
+
+Run against the real deployed cluster, that came back with real rows —
+readable data, not raw random bytes, because the Datagen connector's schema
+carries [annotations](https://github.com/confluentinc/avro-random-generator#annotation-types)
+constraining each field to a realistic set of values:
+
+```
+┌───────────┬─────────────┬─────────────────────┬──────────┐
+│ order_id  │ customer_id │        amount        │ currency │
+├───────────┼─────────────┼─────────────────────┼──────────┤
+│ ORD-10231 │ CUST-9930   │  486.77311305274253 │ EUR      │
+│ ORD-60214 │ CUST-1052   │   407.7184401826551 │ JPY      │
+│ ORD-34012 │ CUST-4471   │   173.4626908098918 │ JPY      │
+│ ORD-92765 │ CUST-1052   │   428.9067136361798 │ EUR      │
+│ ORD-92765 │ CUST-3364   │  60.888841332825706 │ USD      │
+└───────────┴─────────────┴─────────────────────┴──────────┘
+```
+
+That's a real Iceberg table on real object storage, queried over a real REST
+catalog endpoint — with zero pipeline code between the topic and the query.
+
+## A real gotcha with schema evolution
+
+Schemas change. The repo's Avro schema is versioned (`orders_schema_version
+= 1` or `2`) so this is easy to reproduce: version 2 adds a `region` field
+with a default, a backward-compatible Avro change that Schema Registry
+accepts without complaint, and the running connector picks it up as an
+in-place config update.
+
+What actually happened when this was tested against the real deployment: the
+schema change was accepted and the connector kept running healthy — but the
+Tableflow topic's materialization paused immediately after. **Tableflow's
+default `error_handling.mode` is `SUSPEND`**: a materialization failure
+pauses the whole table rather than skipping the bad record. It's the right
+default to ship — silently corrupting a table is worse than stopping — but
+it means a routine, backward-compatible schema change can look exactly like
+an outage if `error_handling.mode` isn't set explicitly first:
+
+```hcl
+error_handling {
+  mode = "LOG" # dead-letter failures instead of suspending the whole table
+}
+```
+
+Worth knowing before a schema changes in production, not after.
+
+## Why it matters
+
+The pattern generalizes past this one topic: any team that built (or is
+about to build) a Kafka-to-lakehouse pipeline just to make streaming data
+queryable in SQL has a second thing to run, monitor, and pay for that exists
+only to keep a copy in sync. Tableflow collapses that into a topic
+attribute — the data doesn't move to become queryable, and it stays a real,
+open Iceberg table the whole time, not a Confluent-only export format.
+
+Full Terraform, the query script, and the real captured output are in the
+[repo](https://github.com/ohad-israeli/zero-etl-lakehouse).
