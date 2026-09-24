@@ -1,6 +1,6 @@
 ---
 title: "Hybrid Governance with Confluent's Unified Stream Manager"
-description: "Cataloging a self-managed Kafka cluster from Confluent Cloud over real ingress PrivateLink — and finding out, for real, whether a CDC connector's auto-created schemas show up without manual registration."
+description: "A self-managed Kafka cluster cataloged from Confluent Cloud over real ingress PrivateLink — and whether a CDC connector's auto-created schemas show up without manual registration."
 date: 2026-09-24
 tags: ["confluent-cloud", "usm", "schema-registry", "privatelink", "hybrid-cloud", "cdc"]
 repo: "https://github.com/ohad-israeli/hybrid-stream-governance"
@@ -8,31 +8,17 @@ status: "active"
 draft: false
 ---
 
-## The business problem
+## What this repo demonstrates
 
-A lot of organizations keep Kafka clusters on-premises or in a private cloud
-— data sovereignty, regulatory requirements, or simply a cloud migration
-that's still in progress — while also wanting Confluent Cloud's governance
-tooling: a searchable catalog, lineage, consistent schema rules, one console
-instead of a different dashboard for every environment. A common way teams
-end up handling this: separate tools for the on-prem estate and the cloud
-estate, stitched together manually, with governance policy that's only as
-consistent as whoever remembers to apply it in both places.
-
-Confluent's **Unified Stream Manager (USM)** is built to close that gap:
-Confluent Cloud becomes the control plane — catalog, governance, lineage,
-monitoring — for **both** cloud and self-managed clusters, while the
-self-managed cluster keeps its own data plane. Message data never leaves it;
-only metadata and telemetry go to the cloud. It's a genuinely new capability
-(the USM Agent reached GA alongside Confluent Platform 8.1), and the
-Confluent-authored material about it stops short of one specific, practical
-question: if a Kafka Connect source connector auto-creates a topic and
-registers its schema — the normal way Debezium-style CDC connectors work,
-with zero manual setup per table — does that show up in the catalog
-automatically, or does someone have to register it by hand?
-
-Nobody had published an answer either way. So this project builds the real
-thing and finds out.
+A self-managed Confluent Platform cluster — Kafka, Kafka Connect, and Schema
+Registry, running on its own VM, outside Confluent Cloud entirely — gets
+cataloged and governed from Confluent Cloud's console through Confluent's
+**Unified Stream Manager (USM)**, connected over real ingress PrivateLink. A
+Debezium CDC connector, registered only against the self-managed side,
+auto-creates a topic and its schemas the normal way CDC connectors do — no
+manual per-table setup. The question this project actually answers: does any
+of that show up in Confluent Cloud's catalog on its own, or does someone have
+to register it by hand?
 
 <figure>
   <img
@@ -45,20 +31,32 @@ thing and finds out.
   </figcaption>
 </figure>
 
-## Try it yourself
+## Why this matters
 
-The [repo](https://github.com/ohad-israeli/hybrid-stream-governance) has the
-whole thing: Terraform for the Confluent Cloud environment and the ingress
-PrivateLink chain (Azure side), an Ansible inventory for the self-managed
-Kafka/Schema Registry/Connect/USM Agent stack, and the Debezium connector
-config used for the actual CDC test. Every step that turned out to need a
-non-obvious flag or a specific API call is captured as a script, not just
-prose — see the repo's README for the exact commands.
+A lot of organizations keep Kafka clusters on-premises or in a private cloud
+— data sovereignty, regulatory requirements, or a cloud migration that's
+still in progress — while also wanting Confluent Cloud's governance tooling:
+a searchable catalog, lineage, consistent schema rules, one console instead
+of a different dashboard per environment. A common way teams end up
+handling this: separate tools for the on-prem estate and the cloud estate,
+stitched together manually, with governance policy that's only as
+consistent as whoever remembers to apply it in both places. USM is built to
+close that gap — Confluent Cloud becomes the control plane for both cloud
+and self-managed clusters, while the self-managed side keeps its own data
+plane (message data never leaves it; only metadata and telemetry go to the
+cloud).
 
-## The key idea
+It's a genuinely new capability, and Confluent's own material about it stops
+short of the one question that decides whether it's trustworthy in practice:
+when a connector creates something dynamically instead of a human registering
+it up front, does governance actually keep up? Nobody had published an
+answer either way, so this project builds the real thing and checks.
 
-"Unified governance" turns out to be **two independent mechanisms sharing one
-console**, and they behave nothing alike:
+## Special configuration that made this work
+
+"Unified governance" turns out to be **two independent mechanisms sharing
+one console**, and knowing which one you're relying on changes what you'd
+actually verify before trusting it in production.
 
 **Schema Registry unification is a synchronous write proxy, not discovery.**
 The self-managed Schema Registry gets an extension
@@ -71,30 +69,26 @@ curl -X PUT -H 'Content-Type: application/vnd.schemaregistry.v1+json' \
   --data '{"mode":"FORWARD"}' 'http://localhost:8081/mode/:.__GLOBAL:'
 ```
 
-Configuring the extension (which an Ansible variable does automatically) and
-*activating* it are two different steps — miss the mode flip, and every
-schema write still succeeds locally; it just never reaches the catalog, with
-no error to point at. That's the realistic failure mode, and it's a loud one
-once you know to check for it, not a silent gap.
+That specific path (`/mode/:.__GLOBAL:`) is the non-obvious part — the more
+guessable `/mode` or `/mode/__GLOBAL` both fail silently against the wrong
+scope. Configuring the extension (an Ansible variable handles that part) and
+*activating* FORWARD mode are two separate steps — miss the mode flip and
+every schema write still succeeds locally; it just never reaches the
+catalog, with no error pointing at why.
 
-**Topic and connector metadata sync is a completely separate channel** — the
-USM Agent, a one-way, outbound-only process that reads the self-managed
-cluster and pushes metadata/telemetry to Confluent Cloud. Confluent Cloud
-never sends commands back down to it.
+**Topic and connector metadata sync is a completely separate channel** — a
+one-way, outbound-only USM Agent process that reads the self-managed cluster
+and pushes metadata/telemetry to Confluent Cloud. Confluent Cloud never
+sends commands back down to it, and it doesn't share the Schema Registry
+extension's forwarding behavior at all.
 
-## Verified against real infrastructure
+## What was verified
 
-Real Azure and Confluent Cloud infrastructure — a self-managed cluster
-(Kafka, Schema Registry, Kafka Connect, USM Agent) running on an Azure VM,
-connected to a real Confluent Cloud environment over real ingress
-PrivateLink, not a local dev cluster standing in for either side.
-
-The actual experiment: a Debezium SQL Server connector, registered against
-the **local** Connect worker and Schema Registry (not Confluent Cloud
-directly — pointing it at Confluent Cloud would prove nothing about USM,
-since a connector talking straight to the cloud registry obviously shows up
-there). With FORWARD mode active, its auto-created schemas appeared in
-Confluent Cloud's real Schema Registry with no manual registration step:
+A Debezium SQL Server connector, registered against the **local** Connect
+worker and Schema Registry — not Confluent Cloud directly, since pointing a
+connector straight at the cloud registry would prove nothing about USM. With
+FORWARD mode active, its auto-created schemas appeared in Confluent Cloud's
+real Schema Registry with no manual registration step:
 
 ```
 $ curl -u $SR_KEY:$SR_SECRET $CC_SR_URL/subjects
@@ -103,35 +97,54 @@ $ curl -u $SR_KEY:$SR_SECRET $CC_SR_URL/subjects
 ```
 
 A standalone test schema forwarded in well under 10 seconds from the moment
-it was written locally — confirming this really is a synchronous proxy, not
-a batched or polling sync.
+it was written locally — confirming this is a synchronous proxy, not a
+batched or polling sync.
 
-**One real, undocumented dependency surfaced along the way**: Confluent
-Cloud's Schema Registry cluster is only provisioned once the *first* Kafka
-cluster exists in an environment — not when the Stream Governance package is
-set, and not by USM Agent registration. A project with zero Confluent
-Cloud-native Kafka clusters (the point of this one) needs one minimal, unused
-cluster purely to trigger that provisioning.
+One real, undocumented dependency also surfaced: Confluent Cloud's Schema
+Registry cluster only provisions once the *first* Kafka cluster exists in an
+environment — not when the Stream Governance package is set, and not by USM
+Agent registration. A project with zero Confluent Cloud-native Kafka
+clusters (the point of this one) needs one minimal, unused cluster purely to
+trigger that provisioning.
 
-## What wasn't independently confirmed
+## What didn't work, and what to think about before you rely on this
 
-Whether the CDC connector's **topic** — as opposed to its schemas — shows up
-in Confluent Cloud's Stream Catalog view couldn't be checked from a terminal:
-there's no CLI command for browsing a self-managed cluster's catalog entries,
-and no documented REST endpoint for it either. The schema-forwarding result
-above came from a real API call against Confluent Cloud's own Schema
-Registry; confirming the topic side would need someone with Console access
-to look. Reporting that limitation plainly rather than guessing at it.
+**The topic side of the catalog couldn't be independently confirmed.**
+Whether the CDC connector's *topic* — as opposed to its schemas — shows up
+in Confluent Cloud's Stream Catalog view isn't checkable from a terminal:
+there's no CLI command or documented REST endpoint for browsing a
+self-managed cluster's catalog entries, only the Console UI. The
+schema-forwarding result above came from a real API call against Confluent
+Cloud's own Schema Registry; confirming the topic side needs Console access.
+Reporting that gap plainly rather than guessing at it — and it's the reason
+this project's infrastructure is being kept running rather than torn down
+immediately, so it can actually be checked.
 
-## Why it matters
+**A handful of environment-level gotchas, worth expecting if you rebuild
+this**: the Ansible collection used needs a specific `ansible-core` version
+(2.21 breaks it; 2.17.x works), RHEL 9's default Python (3.9) is too old for
+it, and `packaging`/`PyYAML` aren't preinstalled on a fresh VM. None of these
+are USM-specific — they're the ordinary cost of standing up Confluent
+Platform by hand — but they're exactly the kind of thing that eats an
+afternoon if you don't know to expect them.
 
-The pattern generalizes past Schema Registry specifically: when a platform
-promises "one governance layer across everything," it's worth asking which
-parts are a live, synchronous mechanism that fails loudly when misconfigured,
-and which parts are asynchronous telemetry that can lag or miss without
-telling you. For USM, that split is schema forwarding versus metadata sync —
-and knowing which is which changes what you actually verify before trusting
-the catalog in production, rather than assuming "unified" means "uniform."
+**The bigger question worth sitting with**: when a platform promises "one
+governance layer across everything," it's worth asking which parts are a
+live, synchronous mechanism that fails loudly when misconfigured, and which
+parts are asynchronous telemetry that can lag or miss without telling you.
+For USM, that split is schema forwarding versus metadata sync — and knowing
+which is which changes what you'd actually verify before trusting the
+catalog in production, rather than assuming "unified" means "uniform."
+
+## Try it yourself
+
+The [repo](https://github.com/ohad-israeli/hybrid-stream-governance) has the
+whole thing: Terraform for the Confluent Cloud environment and the ingress
+PrivateLink chain, an Ansible inventory for the self-managed
+Kafka/Schema Registry/Connect/USM Agent stack, and the Debezium connector
+config used for the CDC test. Every step that needed a non-obvious flag or a
+specific API call is captured as a script, not just prose — see the repo's
+README for the exact commands.
 
 Full Terraform, Ansible, and connector configs are in the
 [repo](https://github.com/ohad-israeli/hybrid-stream-governance).
