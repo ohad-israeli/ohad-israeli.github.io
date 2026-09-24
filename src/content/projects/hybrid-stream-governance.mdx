@@ -33,24 +33,24 @@ to register it by hand?
 
 ## Why this matters
 
-A lot of organizations keep Kafka clusters on-premises or in a private cloud
-— data sovereignty, regulatory requirements, or a cloud migration that's
-still in progress — while also wanting Confluent Cloud's governance tooling:
-a searchable catalog, lineage, consistent schema rules, one console instead
-of a different dashboard per environment. A common way teams end up
-handling this: separate tools for the on-prem estate and the cloud estate,
-stitched together manually, with governance policy that's only as
-consistent as whoever remembers to apply it in both places. USM is built to
-close that gap — Confluent Cloud becomes the control plane for both cloud
-and self-managed clusters, while the self-managed side keeps its own data
-plane (message data never leaves it; only metadata and telemetry go to the
-cloud).
+A common hybrid pattern: the source of truth stays on-premises — a core
+banking ledger, a hospital's patient records, anything where the raw data
+itself isn't allowed to leave a specific network or jurisdiction — while the
+business still wants that data working in the cloud. A CDC connector
+captures every change on-premises the moment it happens, and those events
+get synced into the cloud, where the real downstream work runs: enrichment,
+joins with other cloud-native systems, landing in a data lake, feeding the
+analytics and ML pipelines that only make sense to run there.
 
-It's a genuinely new capability, and Confluent's own material about it stops
-short of the one question that decides whether it's trustworthy in practice:
-when a connector creates something dynamically instead of a human registering
-it up front, does governance actually keep up? Nobody had published an
-answer either way, so this project builds the real thing and checks.
+The moment you're operating that way, you've got two separate estates —
+on-prem and cloud — each generating its own topics, schemas, and connectors,
+and someone has to know what exists on both sides to trust the pipeline
+connecting them. That's the specific gap this project checks: once
+something is created purely on the on-prem side, with a human never
+registering it anywhere, does it actually surface in the cloud's catalog on
+its own? USM is built to answer that with one console instead of two — and
+it's a genuinely new capability, so this project builds the real thing to
+find out whether it delivers.
 
 ## How this actually gets published — the mechanism itself
 
@@ -155,13 +155,23 @@ two different failure modes, and neither one is "the Agent goes and finds
 things" — which is the part that doesn't come across from how USM is
 described.
 
-## What was verified
+## Half the picture, on purpose
 
-A Debezium SQL Server connector, registered against the **local** Connect
-worker and Schema Registry — not Confluent Cloud directly, since pointing a
-connector straight at the cloud registry would prove nothing about USM. With
-FORWARD mode active, its auto-created schemas appeared in Confluent Cloud's
-real Schema Registry with no manual registration step:
+This repo only builds the on-premises half — Kafka, Kafka Connect, Schema
+Registry, and the USM Agent, all on one self-managed VM — plus the minimum
+Confluent Cloud scaffolding needed to register it (an environment, Stream
+Governance, the PrivateLink chain). There's no cloud-side pipeline doing any
+of the real work. That's deliberate: it isolates exactly one question —
+once something exists purely on the on-prem side, created by a connector
+that has zero awareness USM even exists, does it show up in Confluent
+Cloud's console anyway, or does a human have to register it there by hand?
+
+What actually happened: a real Debezium SQL Server connector, registered
+against the **local** Connect worker and Schema Registry only — never
+pointed at Confluent Cloud directly, since a connector talking straight to
+the cloud registry would obviously show up there and prove nothing about
+USM. With Schema Registry's `FORWARD` mode active, its auto-created schemas
+appeared in Confluent Cloud's real Schema Registry with no manual step:
 
 ```
 $ curl -u $SR_KEY:$SR_SECRET $CC_SR_URL/subjects
@@ -170,72 +180,40 @@ $ curl -u $SR_KEY:$SR_SECRET $CC_SR_URL/subjects
 ```
 
 A standalone test schema forwarded in well under 10 seconds from the moment
-it was written locally — confirming this is a synchronous proxy, not a
-batched or polling sync.
+it was written locally — a synchronous proxy, not a batched or polling
+sync.
 
-**And the topic side — the actual open question this project was built to
-answer — checked out too.** The Confluent Cloud Console's topic list for the
-registered self-managed cluster shows every topic on it, with no manual
-registration step at all: the CDC connector's own auto-created topic
+And what actually shows up in the Console, once the USM Agent is running
+and correctly registered: every topic on the self-managed cluster,
+including the CDC connector's own auto-created topic
 (`sqlserver_source.SourceDB.dbo.TBL_AG_TEST4`), its default topic
 (`sqlserver_source`), the Debezium schema-history topic
 (`schema-changes.sourcedb`), and Kafka Connect's own internal topics
-(`connect-cluster-configs`/`-offsets`/`-status`) all appear automatically.
+(`connect-cluster-configs`/`-offsets`/`-status`) — all with zero manual
+registration:
+
+<figure>
+  <img
+    src="/diagrams/hybrid-stream-governance-console-mockup.svg"
+    alt="Confluent Cloud Console topic list for the registered self-managed cluster, showing connect-cluster-configs, connect-cluster-offsets, connect-cluster-status, schema-changes.sourcedb, sqlserver_source.SourceDB.dbo.TBL_AG_TEST4 (highlighted, the CDC-created topic), and sqlserver_source — all present with no manual registration."
+  />
+  <figcaption>
+    Recreated from the real topic list captured during testing — the
+    infrastructure was already torn down before a proper screenshot got
+    saved (worth doing differently next time).
+  </figcaption>
+</figure>
+
 So: yes — a CDC connector creating a topic dynamically, with zero awareness
-that USM exists, is enough for that topic to show up in Confluent Cloud's
-catalog on its own.
+that USM exists, is enough for that topic to reach Confluent Cloud's catalog
+on its own.
 
-One real, undocumented dependency also surfaced: Confluent Cloud's Schema
-Registry cluster only provisions once the *first* Kafka cluster exists in an
-environment — not when the Stream Governance package is set, and not by USM
-Agent registration. A project with zero Confluent Cloud-native Kafka
-clusters (the point of this one) needs one minimal, unused cluster purely to
-trigger that provisioning.
-
-## What didn't work, and what to think about before you rely on this
-
-**The USM Agent can be completely absent with no obvious symptom.** Kafka,
-Schema Registry, and Kafka Connect can all be running fine, `confluent usm
-kafka-cluster register` can succeed, and the Console will simply show
-nothing for that cluster — because registering a cluster and actually
-running the agent process that feeds it are two separate things, and
-nothing errors loudly if the second one was skipped. The only symptom is
-silence: no metrics, no health, nothing to point at as broken.
-
-**Once installed, the Agent's own config can point at the wrong Confluent
-Cloud endpoint — and still connect, which makes it worse.** By default it
-targeted the generic public `api.confluent.cloud` hostname. The TLS
-handshake succeeds and the agent looks healthy, but every metrics/telemetry
-call comes back `404`, because this cluster is registered as PrivateLink-
-only and the public endpoint doesn't recognize it. The fix is pointing the
-agent explicitly at the access point's own FrontDoor hostname
-(`api-<id>.<region>.azure.accesspoint.glb.confluent.cloud`) — a "successful
-connection with silently wrong data" failure mode, not a connection error,
-which is the kind of thing that's easy to miss if you're only checking that
-the process is running.
-
-**A smaller, still-open item**: Kafka Connect's own metrics specifically
-return `400` even after that fix — a payload-format issue on just that one
-metric source, not investigated further. And `confluent usm kafka-cluster
-describe` 404s consistently over the CLI even once everything else works —
-`list` returns the cluster fine, `describe` doesn't. A CLI bug, not a
-governance-mechanism problem.
-
-**A handful of environment-level gotchas, worth expecting if you rebuild
-this**: the Ansible collection used needs a specific `ansible-core` version
-(2.21 breaks it; 2.17.x works), RHEL 9's default Python (3.9) is too old for
-it, and `packaging`/`PyYAML` aren't preinstalled on a fresh VM. None of these
-are USM-specific — they're the ordinary cost of standing up Confluent
-Platform by hand — but they're exactly the kind of thing that eats an
-afternoon if you don't know to expect them.
-
-**The bigger question worth sitting with**: when a platform promises "one
-governance layer across everything," it's worth asking which parts are a
-live, synchronous mechanism that fails loudly when misconfigured, and which
-parts are asynchronous telemetry that can lag or miss without telling you.
-For USM, that split is schema forwarding versus metadata sync — and knowing
-which is which changes what you'd actually verify before trusting the
-catalog in production, rather than assuming "unified" means "uniform."
+One real, undocumented dependency surfaced while setting this up: Confluent
+Cloud's Schema Registry cluster only provisions once the *first* Kafka
+cluster exists in an environment — not when the Stream Governance package is
+set, and not by USM Agent registration. A project with zero Confluent
+Cloud-native Kafka clusters (the point of this one) needs one minimal,
+unused cluster purely to trigger that provisioning.
 
 ## Try it yourself
 

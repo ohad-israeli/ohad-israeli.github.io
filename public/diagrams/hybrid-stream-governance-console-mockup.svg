@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="430" viewBox="0 0 1000 430" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+<rect width="1000" height="430" fill="#0b0e14"/>
+
+<!-- toggle row -->
+<rect x="24" y="24" width="952" height="46" rx="10" fill="#12161f" stroke="#232838" stroke-width="1.5"/>
+<circle cx="52" cy="47" r="11" fill="#22c55e"/>
+<path d="M47,47 l3.5,3.5 L57,43" stroke="#0b0e14" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="66" cy="47" r="7.5" fill="#0b0e14"/>
+<text x="82" y="52" font-size="14.5" fill="#e6e8ef">Hide internal topics</text>
+
+<!-- table header -->
+<rect x="24" y="86" width="952" height="42" fill="#161b26"/>
+<text x="44" y="112" font-size="13" fill="#9aa1b2" font-weight="600">Topic name</text>
+<text x="646" y="112" font-size="13" fill="#9aa1b2" font-weight="600" text-anchor="end">Partitions</text>
+<text x="778" y="112" font-size="13" fill="#9aa1b2" font-weight="600" text-anchor="end">Production</text>
+<text x="908" y="112" font-size="13" fill="#9aa1b2" font-weight="600" text-anchor="end">Consumption</text>
+
+<!-- rows -->
+<!-- connect-cluster-configs -->
+<rect x="24" y="128" width="952" height="50" fill="#0e1218"/>
+<text x="44" y="158" font-size="14" fill="#b9a6f5">connect-cluster-configs</text>
+<text x="646" y="158" font-size="13.5" fill="#e6e8ef" text-anchor="end">1</text>
+<text x="778" y="158" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+<text x="908" y="158" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+
+<!-- connect-cluster-offsets -->
+<rect x="24" y="178" width="952" height="50" fill="#12161f"/>
+<text x="44" y="208" font-size="14" fill="#b9a6f5">connect-cluster-offsets</text>
+<text x="646" y="208" font-size="13.5" fill="#e6e8ef" text-anchor="end">25</text>
+<text x="778" y="208" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+<text x="908" y="208" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+
+<!-- connect-cluster-status -->
+<rect x="24" y="228" width="952" height="50" fill="#0e1218"/>
+<text x="44" y="258" font-size="14" fill="#b9a6f5">connect-cluster-status</text>
+<text x="646" y="258" font-size="13.5" fill="#e6e8ef" text-anchor="end">5</text>
+<text x="778" y="258" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+<text x="908" y="258" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+
+<!-- schema-changes.sourcedb -->
+<rect x="24" y="278" width="952" height="50" fill="#12161f"/>
+<text x="44" y="308" font-size="14" fill="#b9a6f5">schema-changes.sourcedb</text>
+<text x="646" y="308" font-size="13.5" fill="#e6e8ef" text-anchor="end">1</text>
+<text x="778" y="308" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+<text x="908" y="308" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+
+<!-- sqlserver_source.SourceDB.dbo.TBL_AG_TEST4 (highlighted - the CDC topic) -->
+<rect x="24" y="328" width="952" height="50" fill="#17202c" stroke="#3b82f6" stroke-width="1.4"/>
+<text x="44" y="358" font-size="14" fill="#c9b8ff" font-weight="600">sqlserver_source.SourceDB.dbo.TBL_AG_TEST4</text>
+<text x="646" y="358" font-size="13.5" fill="#e6e8ef" text-anchor="end">1</text>
+<text x="778" y="358" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+<text x="908" y="358" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+<rect x="810" y="337" width="150" height="22" rx="11" fill="#1e3a8a"/>
+<text x="885" y="352" font-size="10.5" fill="#93c5fd" text-anchor="middle" font-weight="600">CDC-CREATED, AUTO-SYNCED</text>
+
+<!-- sqlserver_source -->
+<rect x="24" y="378" width="952" height="50" fill="#0e1218"/>
+<text x="44" y="408" font-size="14" fill="#b9a6f5">sqlserver_source</text>
+<text x="646" y="408" font-size="13.5" fill="#e6e8ef" text-anchor="end">1</text>
+<text x="778" y="408" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+<text x="908" y="408" font-size="13.5" fill="#e6e8ef" text-anchor="end">0 B/s</text>
+</svg>
