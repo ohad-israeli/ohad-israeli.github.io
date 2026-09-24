@@ -1,0 +1,55 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="hybrid-stream-governance" id="hybrid-stream-governance-diagram">
+    <mxGraphModel dx="1300" dy="650" grid="1" gridSize="10" guides="1" tooltips="1"
+        connect="1" arrows="1" fold="1" page="1" pageScale="1"
+        pageWidth="1220" pageHeight="640" math="0" shadow="0" background="#0d1117">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="Hybrid Governance for a Self-Managed Kafka Cluster with USM" style="text;html=1;fontColor=#e6edf3;fontSize=19;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="310" y="12" width="600" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="Two different sync mechanisms, one console — proven over real ingress PrivateLink" style="text;html=1;fontColor=#9da7b3;fontSize=12.5;align=center;" vertex="1" parent="1">
+          <mxGeometry x="260" y="38" width="700" height="18" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="azzone" value="Self-managed cluster (Azure VM — stands in for on-prem)" style="rounded=1;dashed=1;dashPattern=7 5;strokeColor=#ff9900;fillColor=none;fontColor=#ff9900;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=16;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="30" y="90" width="560" height="400" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="sqlserver" value="SQL Server&#10;(CDC source)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#9da7b3;fontColor=#e6edf3;fontSize=11.5;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="165" width="200" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cp" value="Confluent Platform&#10;Kafka + Connect + Schema Registry&#10;(self-managed)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#ffb454;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;fontStyle=1;image;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;imageAlign=left;imageWidth=24;imageHeight=24;spacingLeft=28;" vertex="1" parent="1">
+          <mxGeometry x="320" y="155" width="240" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="usmagent" value="USM Agent&#10;outbound-only metadata/telemetry — reads only, never receives commands" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#388bfd;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="355" width="500" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cczone" value="Confluent Cloud (control plane)" style="rounded=1;dashed=1;strokeColor=#388bfd;fillColor=none;fontColor=#388bfd;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=16;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="830" y="90" width="350" height="400" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="srcloud" value="Schema Registry&#10;registry of record for the hybrid estate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="860" y="160" width="290" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="catalog" value="Stream Catalog&#10;governance control plane" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#57606a;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="860" y="355" width="290" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="caption" value="&quot;Unified governance&quot; is two different mechanisms wearing one UI. Schema forwarding is a real-time write proxy — verified: a Debezium CDC connector's auto-created schemas appeared in Confluent Cloud's real Schema Registry with no manual step, once FORWARD mode was explicitly enabled. Metadata/topic sync is a separate, one-way telemetry channel from the USM Agent — its topic-level catalog visibility wasn't independently verifiable in this session." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#57606a;fontColor=#9da7b3;fontSize=10.5;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="530" width="1140" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" value="CDC" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9da7b3;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;" edge="1" source="sqlserver" target="cp" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="schema FORWARD — synchronous proxy (fails loudly if you skip the mode flip)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="cp" target="srcloud" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" value="metadata sync — async telemetry (can lag or miss silently)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#388bfd;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;" edge="1" source="usmagent" target="catalog" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
