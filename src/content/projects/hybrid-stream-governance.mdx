@@ -1,6 +1,6 @@
 ---
 title: "Hybrid Governance with Confluent's Unified Stream Manager"
-description: "A self-managed Kafka cluster cataloged from Confluent Cloud over real ingress PrivateLink — and whether a CDC connector's auto-created schemas show up without manual registration."
+description: "A self-managed Kafka cluster cataloged from Confluent Cloud over real ingress PrivateLink — confirming a CDC connector's auto-created topics and schemas both show up without manual registration."
 date: 2026-09-24
 tags: ["confluent-cloud", "usm", "schema-registry", "privatelink", "hybrid-cloud", "cdc"]
 repo: "https://github.com/ohad-israeli/hybrid-stream-governance"
@@ -100,6 +100,18 @@ A standalone test schema forwarded in well under 10 seconds from the moment
 it was written locally — confirming this is a synchronous proxy, not a
 batched or polling sync.
 
+**And the topic side — the actual open question this project was built to
+answer — checked out too.** The Confluent Cloud Console's topic list for the
+registered self-managed cluster shows every topic on it, with no manual
+registration step at all: the CDC connector's own auto-created topic
+(`sqlserver_source.SourceDB.dbo.TBL_AG_TEST4`), its default topic
+(`sqlserver_source`), the Debezium schema-history topic
+(`schema-changes.sourcedb`), and Kafka Connect's own internal topics
+(`connect-cluster-configs`/`-offsets`/`-status`) all appear automatically.
+So: yes — a CDC connector creating a topic dynamically, with zero awareness
+that USM exists, is enough for that topic to show up in Confluent Cloud's
+catalog on its own.
+
 One real, undocumented dependency also surfaced: Confluent Cloud's Schema
 Registry cluster only provisions once the *first* Kafka cluster exists in an
 environment — not when the Stream Governance package is set, and not by USM
@@ -109,16 +121,32 @@ trigger that provisioning.
 
 ## What didn't work, and what to think about before you rely on this
 
-**The topic side of the catalog couldn't be independently confirmed.**
-Whether the CDC connector's *topic* — as opposed to its schemas — shows up
-in Confluent Cloud's Stream Catalog view isn't checkable from a terminal:
-there's no CLI command or documented REST endpoint for browsing a
-self-managed cluster's catalog entries, only the Console UI. The
-schema-forwarding result above came from a real API call against Confluent
-Cloud's own Schema Registry; confirming the topic side needs Console access.
-Reporting that gap plainly rather than guessing at it — and it's the reason
-this project's infrastructure is being kept running rather than torn down
-immediately, so it can actually be checked.
+**The USM Agent can be completely absent with no obvious symptom.** Kafka,
+Schema Registry, and Kafka Connect can all be running fine, `confluent usm
+kafka-cluster register` can succeed, and the Console will simply show
+nothing for that cluster — because registering a cluster and actually
+running the agent process that feeds it are two separate things, and
+nothing errors loudly if the second one was skipped. The only symptom is
+silence: no metrics, no health, nothing to point at as broken.
+
+**Once installed, the Agent's own config can point at the wrong Confluent
+Cloud endpoint — and still connect, which makes it worse.** By default it
+targeted the generic public `api.confluent.cloud` hostname. The TLS
+handshake succeeds and the agent looks healthy, but every metrics/telemetry
+call comes back `404`, because this cluster is registered as PrivateLink-
+only and the public endpoint doesn't recognize it. The fix is pointing the
+agent explicitly at the access point's own FrontDoor hostname
+(`api-<id>.<region>.azure.accesspoint.glb.confluent.cloud`) — a "successful
+connection with silently wrong data" failure mode, not a connection error,
+which is the kind of thing that's easy to miss if you're only checking that
+the process is running.
+
+**A smaller, still-open item**: Kafka Connect's own metrics specifically
+return `400` even after that fix — a payload-format issue on just that one
+metric source, not investigated further. And `confluent usm kafka-cluster
+describe` 404s consistently over the CLI even once everything else works —
+`list` returns the cluster fine, `describe` doesn't. A CLI bug, not a
+governance-mechanism problem.
 
 **A handful of environment-level gotchas, worth expecting if you rebuild
 this**: the Ansible collection used needs a specific `ansible-core` version
