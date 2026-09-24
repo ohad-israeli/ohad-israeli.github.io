@@ -52,17 +52,88 @@ when a connector creates something dynamically instead of a human registering
 it up front, does governance actually keep up? Nobody had published an
 answer either way, so this project builds the real thing and checks.
 
-## Special configuration that made this work
+## How this actually gets published — the mechanism itself
 
-"Unified governance" turns out to be **two independent mechanisms sharing
-one console**, and knowing which one you're relying on changes what you'd
-actually verify before trusting it in production.
+"Unified governance" turns out to be **two completely independent
+mechanisms sharing one console**, and neither one is what you'd guess from
+the name "USM Agent." Here's what's actually running, confirmed by reading
+the real config on the box and the real traffic in its access log — not
+from the marketing description.
 
-**Schema Registry unification is a synchronous write proxy, not discovery.**
-The self-managed Schema Registry gets an extension
-(`io.confluent.schema.registry.usm.UsmSchemaRegistryExtension`) that, once
-its global mode is explicitly flipped to `FORWARD`, transparently redirects
-every new schema write to Confluent Cloud's Schema Registry:
+### Topics and connectors: self-reporting, not discovery
+
+The natural assumption is that some USM component actively scans the
+cluster — connects to it, lists its topics and connectors, and reports back.
+**That's not what happens.** The "USM Agent" service on the VM is, in its
+entirety, a local Envoy proxy — `ps aux` shows its only process is
+`envoy -c usm-agent.yaml`. It has no code that inspects Kafka, Connect, or
+anything else. It doesn't ask any component for a topic list.
+
+Instead, **every Confluent Platform component already knows what it's
+running, and reports that itself** — through `TelemetryReporter`, a plugin
+that ships with the platform (not something USM adds), pointed at a new
+local destination:
+
+```properties
+# Kafka Connect's connect-distributed.properties (broker/controller carry the
+# equivalent confluent.telemetry.exporter._usm.* block):
+metric.reporters=io.confluent.telemetry.reporter.TelemetryReporter
+confluent.telemetry.exporter._usm.enabled=True
+confluent.telemetry.exporter._usm.type=http
+confluent.telemetry.exporter._usm.client.base.url=http://cp-node:10000
+```
+
+Every broker, the controller, and the Connect worker each push their own
+metrics and events to `http://cp-node:10000` — the local Agent's dataplane
+port — on their own schedule. The Agent's *entire* job on receipt is:
+inject Confluent Cloud credentials and the environment-id header, and relay
+the request over the network. That's confirmed directly by its route table
+(`usm-agent.yaml`), which does nothing but forward two paths to two
+different Confluent Cloud backends:
+
+```yaml
+routes:
+  - match: {prefix: "/v1/events"}    # -> Metadata Receiver (topics/connectors/configs)
+    route: {cluster: ccloud, prefix_rewrite: "/mr/v1/events"}
+  - match: {prefix: "/v1/metrics"}   # -> Telemetry Receiver (throughput/rate time series)
+    route: {cluster: ccloud, prefix_rewrite: "/tr/v1/metrics"}
+```
+
+The real access log shows exactly this split in practice — `kafka.server`
+and `kafka.connect`-tagged POSTs hit `/v1/events` (this is where the topic
+list, the connector list, and configs travel — the controller's config
+explicitly names the route `catalog-events`), while a wider set of
+component tags (`kafka.server`, `kafka.connect`, `kafka.consumer`,
+`kafka.producer`, `kafka.rest`, `kafka.admin.client`) hit `/v1/metrics` for
+the throughput/rate numbers the Console's topic table shows.
+
+So: **discovery isn't the Agent's responsibility at all — it doesn't have
+one.** It's each component's own, already-existing self-reporting,
+redirected to a local relay instead of wherever it went before. That also
+explains why an absent Agent produces total silence rather than an error:
+the components keep trying to push to `cp-node:10000` on schedule
+regardless of whether anything's listening there. Nothing is ever "asking"
+the Agent to go find something, so there's nothing to fail loudly when it can't.
+
+### Schemas: a completely different mechanism, bypassing the Agent entirely
+
+Schema forwarding doesn't go through the Agent, the Envoy proxy, or port
+`10000` at all. The self-managed Schema Registry has its own extension
+(`io.confluent.schema.registry.usm.UsmSchemaRegistryExtension`) with its own
+direct API key/secret and its own endpoint URL, configured independently of
+anything USM-Agent-related:
+
+```properties
+# schema-registry.properties
+schema.registry.resource.extension.class=io.confluent.schema.registry.usm.UsmSchemaRegistryExtension
+usm.schema.registry.remote.endpoint=https://psrc-xxxx.eastus.azure.confluent.cloud
+usm.schema.registry.remote.api.key=...
+usm.schema.registry.remote.api.secret=...
+```
+
+Once its global mode is flipped to `FORWARD`, every new schema write is
+synchronously redirected straight to Confluent Cloud's Schema Registry, over
+its own connection, the moment it happens locally:
 
 ```bash
 curl -X PUT -H 'Content-Type: application/vnd.schemaregistry.v1+json' \
@@ -76,11 +147,13 @@ scope. Configuring the extension (an Ansible variable handles that part) and
 every schema write still succeeds locally; it just never reaches the
 catalog, with no error pointing at why.
 
-**Topic and connector metadata sync is a completely separate channel** — a
-one-way, outbound-only USM Agent process that reads the self-managed cluster
-and pushes metadata/telemetry to Confluent Cloud. Confluent Cloud never
-sends commands back down to it, and it doesn't share the Schema Registry
-extension's forwarding behavior at all.
+**So, directly**: topics and connectors reach the catalog via each
+component's own built-in telemetry self-reporting, relayed (not discovered)
+by the Agent; schemas reach it via a synchronous write-proxy on the Schema
+Registry that has nothing to do with the Agent. Two different mechanisms,
+two different failure modes, and neither one is "the Agent goes and finds
+things" — which is the part that doesn't come across from how USM is
+described.
 
 ## What was verified
 
