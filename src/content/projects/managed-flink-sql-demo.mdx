@@ -147,55 +147,6 @@ not a CLI dump, the enriched record itself, sitting in the topic:
   <figcaption>A real enriched record — the join actually happened.</figcaption>
 </figure>
 
-## What didn't work, and what to think about before you rely on this
-
-**`CREATE TABLE ... AS SELECT` isn't supported against a Kafka catalog.**
-CMF rejects it outright: `"CREATE TABLE AS is not supported on Kafka
-catalog."` The fix is mechanical — split it into an explicit `CREATE TABLE`
-plus a separate `INSERT INTO ... SELECT` — but it's a real difference from
-plain Flink SQL that will surprise anyone copying a tutorial written against
-a different catalog type.
-
-**The built-in demo catalog is a Confluent Cloud feature, not a self-managed
-one.** The original plan assumed `examples.marketplace` — Confluent's
-zero-setup demo dataset — would just be available. It isn't, on self-managed
-CMF: every catalog has to be a real **Kafka Catalog**, explicitly registered
-against an actual Kafka cluster and Schema Registry. There's no synthetic
-data source to lean on; the Kafka side has to be real from the start.
-
-**The single most misleading error of this whole build**: `"This server
-does not host this topic-partition"` — persistent, reproducible, and
-survived switching Kafka config, listener setup, and even the entire
-backend (docker-compose Kafka → a from-scratch Confluent Platform-via-CFK
-deployment). The actual cause, found only by testing against a completely
-fresh CMF environment/catalog: **a CMF Statement's lifecycle record is
-scoped to its owning Environment, but repeatedly re-registering the same
-Kafka Catalog under the same environment name, across several debugging
-attempts, left it in a state CMF couldn't cleanly recover from.** A fresh
-environment name worked immediately, first try, against the exact same
-Kafka. None of the RF, listener, or KRaft-vs-ZooKeeper theories tested along
-the way were the actual problem — a genuinely useful lesson in not trusting
-the first plausible-sounding root cause.
-
-**A `KafkaDatabase`'s `ddlEnvironments` allowlist is a real, separate
-permission gate.** Re-running `CREATE TABLE` against a renamed environment
-failed with `"This environment does not have CREATE TABLE permissions for
-database ..."` until that list was explicitly updated — registering a
-catalog and being allowed to run DDL against it are two different steps.
-
-**Statements and Applications (the custom-JAR resource type) aren't just
-two ways to submit a job — they expose different UI/API surfaces.**
-Applications get an Events log tab; Statements don't have one at all —
-instead they expose an **Exceptions** view (`GET /statements/{name}/exceptions`),
-a real, separate endpoint, not a missing feature.
-
-**A couple of smaller, environment-level gotchas** worth expecting if you
-build this yourself: Confluent Platform 8.x renamed its Control Center image
-to `cp-enterprise-control-center-next-gen` (the classic name doesn't exist
-past CP 7.9.x); and Flink's transactional Kafka sink needs
-`transaction.max.timeout.ms` raised above the broker default — a gap even
-Confluent's own official single-node reference manifest doesn't cover.
-
 ## Try it yourself
 
 The [repo](https://github.com/ohad-israeli/managed-flink-sql-demo) has the
