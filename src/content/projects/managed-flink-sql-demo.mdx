@@ -1,0 +1,211 @@
+---
+title: "Enterprise Flink SQL, Managed Through CMF"
+description: "A customer/click enrichment job submitted with plain Flink SQL, no custom JAR, running against a real Confluent Platform backend (Kafka, Schema Registry, Control Center) — all managed through Confluent Manager for Apache Flink."
+date: 2026-09-27
+tags: ["flink", "confluent-platform-for-flink", "cmf", "flink-sql", "kubernetes", "confluent-platform"]
+repo: "https://github.com/ohad-israeli/managed-flink-sql-demo"
+status: "active"
+draft: false
+---
+
+## What this repo demonstrates
+
+A Flink SQL job — an enrichment join between a clickstream and a customer
+table — submitted with **no custom JAR**, running against a **real Confluent
+Platform backend** (Kafka, Schema Registry, Control Center, all deployed via
+Confluent for Kubernetes), with the whole thing managed through **Confluent
+Manager for Apache Flink (CMF)**. Everything — CMF, the Flink Kubernetes
+Operator, and Confluent Platform itself — runs on a single Kubernetes
+cluster on one existing box. No new cloud infrastructure, no separate bill.
+
+<figure>
+  <img
+    src="/diagrams/managed-flink-sql-demo.svg"
+    alt="A single minikube Kubernetes node hosts two namespaces: flink-sql-demo, running Confluent Manager for Apache Flink, the Flink Kubernetes Operator, and the running customer-click-enrichment SQL statement; and confluent, running a real Confluent Platform deployment (Kafka, Schema Registry, Control Center) installed via Confluent for Kubernetes. The Flink statement reads the clicks and customers topics and writes to customer_click_activity. Three separate UIs — CMF, the native Flink job dashboard, and Control Center — are reached from a Mac browser over one SSH tunnel."
+  />
+  <figcaption>
+    Two namespaces, one cluster. Editable source:{' '}
+    <a href="/diagrams/managed-flink-sql-demo.drawio" download>managed-flink-sql-demo.drawio</a>.
+  </figcaption>
+</figure>
+
+## Why this matters
+
+A common way teams evaluate stream processing is standing up open-source
+Apache Flink themselves — and discovering that "run a Flink cluster" is
+really "run a distributed system": high availability, upgrades, security,
+and resource isolation across every job anyone submits, all now the team's
+own responsibility. Confluent's pitch for Flink managed through CMF is
+specifically about removing that layer, and it's worth stating its actual
+claims plainly rather than vaguely: one-click integration between Kafka and
+Flink with schemas managed automatically through Schema Registry; a
+SQL-first developer experience (ANSI SQL, Python, Java, a browser workspace,
+a CLI, a VS Code extension); integrated security and access control shared
+with the rest of Confluent Platform; one CMF control plane that can manage
+Flink workloads across multiple Kubernetes clusters and regions; and
+enterprise support behind all of it. (Confluent's latest platform release
+also ships an MCP server for Flink — letting an AI agent manage jobs through
+natural language — which this project doesn't touch, but is worth knowing
+the platform now supports.)
+
+This project checks a specific, testable version of that pitch: can a real
+enrichment job be written, deployed, and observed **entirely through SQL and
+a managed console**, without anyone hand-operating a Flink cluster or
+writing a line of Java?
+
+## The key idea: a CMF Statement, not a job
+
+CMF doesn't have a separate "streaming job" object. Everything — a one-shot
+`CREATE TABLE`, a seed `INSERT`, and a long-running enrichment — is the same
+kind of resource: a **Statement**. Here's the actual detail view for the
+one that's still running:
+
+<figure>
+  <img
+    src="/screenshots/managed-flink-sql-demo/cmf-statement-detail-enrichment.png"
+    alt="CMF's detail view for the customer-click-enrichment statement: status RUNNING, Flink version v1_19, Kind INSERT_INTO, Bounded false, Append only true, Parallelism 1, JobManager 1x (0.5 CPU / 1 GiB), TaskManager 1x (1 CPU / 1 GiB), and the full SQL text: INSERT INTO customer_click_activity SELECT c.click_id, c.user_id, cu.customer_name, cu.customer_email, c.url, c.user_agent, c.view_time FROM clicks JOIN customers."
+  />
+  <figcaption>The running statement's own detail page in CMF.</figcaption>
+</figure>
+
+A few fields here are worth actually reading, not skimming past:
+
+- **Kind: `INSERT_INTO`** — even a continuously-running enrichment job is,
+  to CMF, just an `INSERT` statement. There's no separate "streaming
+  application" resource type to learn; the same `flink statement create`
+  command that runs a one-shot `CREATE TABLE` also runs this.
+- **Bounded: `false`** — this is what actually marks it as an unbounded,
+  continuously-running query rather than a batch job that finishes. CMF
+  infers this from the query itself; nobody flags it explicitly.
+- **Append only: `true`** — the sink only ever appends rows, never retracts
+  one. That's a direct, checkable consequence of this being a plain,
+  non-temporal stream-stream join with no aggregation — the kind of detail
+  that would flip to `false` the moment the query changed shape.
+- **Parallelism: 1**, one JobManager (0.5 CPU / 1 GiB), one TaskManager
+  (1 CPU / 1 GiB) — sized for a single lightweight demo statement, not
+  tuned for real throughput. Scaling this is a compute-pool setting, not a
+  code change.
+
+And the SQL itself is right there in the console — the exact statement
+that's running, not a paraphrase of it. Nothing about submitting this
+needed a JAR, a Dockerfile, or a JobManager REST call.
+
+## What was verified
+
+**The full lifecycle is visible in one place.** Building this enrichment
+table took six statements — create the two source tables, seed sample data
+into each, create the output table, then the enrichment `INSERT` itself —
+and all six show up, in order, as real CMF-tracked resources:
+
+<figure>
+  <img
+    src="/screenshots/managed-flink-sql-demo/cmf-statements-list.png"
+    alt="CMF's Statements list for the sql-demo environment: create-clicks, create-customers, create-enrichment-table, seed-customers, and seed-clicks all Completed, and customer-click-enrichment Running — all on compute pool sql-demo-pool."
+  />
+  <figcaption>Create, seed, enrich — the whole build, as six real statements.</figcaption>
+</figure>
+
+**The environment itself, registered against a real Confluent Platform
+cluster:**
+
+<figure>
+  <img
+    src="/screenshots/managed-flink-sql-demo/cmf-environments.png"
+    alt="CMF's Flink environments list showing sql-demo, connected to Kubernetes cluster default-k8s-cluster, namespace flink-sql-demo, 7 resources across 2 types."
+  />
+  <figcaption>One environment, one real Kubernetes cluster behind it.</figcaption>
+</figure>
+
+**The native Flink job graph** — a separate UI from CMF's own, reached
+through the Flink CLI's `web-ui-forward`, showing the actual DAG: two
+sources, a join, and a sink writing to `customer_click_activity`:
+
+<figure>
+  <img
+    src="/screenshots/managed-flink-sql-demo/flink-job-graph.png"
+    alt="The classic Apache Flink dashboard's job graph for customer-click-enrichment: Source clicks and Source customers each pass through a Calc operator into a Join, then through another Calc into a Writer and Committer for customer_click_activity. Job state RUNNING, duration 34 minutes."
+  />
+  <figcaption>The classic Flink dashboard — a genuinely separate surface from CMF's own UI.</figcaption>
+</figure>
+
+**And the actual output, in a real Confluent Platform Control Center** —
+not a CLI dump, the enriched record itself, sitting in the topic:
+
+<figure>
+  <img
+    src="/screenshots/managed-flink-sql-demo/controlcenter-topics.png"
+    alt="Confluent Control Center's Topics view showing clicks, customer_click_activity, and customers, all Healthy, 6 partitions and 6 replicas each."
+  />
+  <figcaption>The same topics, viewed from Confluent Platform's own console.</figcaption>
+</figure>
+
+<figure>
+  <img
+    src="/screenshots/managed-flink-sql-demo/controlcenter-message-detail.png"
+    alt="Control Center's message viewer for customer_click_activity, showing a real enriched record: click_id c4, user_id 103, customer_name Carla Diaz, customer_email carla@example.com, url /products/bags, user_agent Safari/17, view_time 8."
+  />
+  <figcaption>A real enriched record — the join actually happened.</figcaption>
+</figure>
+
+## What didn't work, and what to think about before you rely on this
+
+**`CREATE TABLE ... AS SELECT` isn't supported against a Kafka catalog.**
+CMF rejects it outright: `"CREATE TABLE AS is not supported on Kafka
+catalog."` The fix is mechanical — split it into an explicit `CREATE TABLE`
+plus a separate `INSERT INTO ... SELECT` — but it's a real difference from
+plain Flink SQL that will surprise anyone copying a tutorial written against
+a different catalog type.
+
+**The built-in demo catalog is a Confluent Cloud feature, not a self-managed
+one.** The original plan assumed `examples.marketplace` — Confluent's
+zero-setup demo dataset — would just be available. It isn't, on self-managed
+CMF: every catalog has to be a real **Kafka Catalog**, explicitly registered
+against an actual Kafka cluster and Schema Registry. There's no synthetic
+data source to lean on; the Kafka side has to be real from the start.
+
+**The single most misleading error of this whole build**: `"This server
+does not host this topic-partition"` — persistent, reproducible, and
+survived switching Kafka config, listener setup, and even the entire
+backend (docker-compose Kafka → a from-scratch Confluent Platform-via-CFK
+deployment). The actual cause, found only by testing against a completely
+fresh CMF environment/catalog: **a CMF Statement's lifecycle record is
+scoped to its owning Environment, but repeatedly re-registering the same
+Kafka Catalog under the same environment name, across several debugging
+attempts, left it in a state CMF couldn't cleanly recover from.** A fresh
+environment name worked immediately, first try, against the exact same
+Kafka. None of the RF, listener, or KRaft-vs-ZooKeeper theories tested along
+the way were the actual problem — a genuinely useful lesson in not trusting
+the first plausible-sounding root cause.
+
+**A `KafkaDatabase`'s `ddlEnvironments` allowlist is a real, separate
+permission gate.** Re-running `CREATE TABLE` against a renamed environment
+failed with `"This environment does not have CREATE TABLE permissions for
+database ..."` until that list was explicitly updated — registering a
+catalog and being allowed to run DDL against it are two different steps.
+
+**Statements and Applications (the custom-JAR resource type) aren't just
+two ways to submit a job — they expose different UI/API surfaces.**
+Applications get an Events log tab; Statements don't have one at all —
+instead they expose an **Exceptions** view (`GET /statements/{name}/exceptions`),
+a real, separate endpoint, not a missing feature.
+
+**A couple of smaller, environment-level gotchas** worth expecting if you
+build this yourself: Confluent Platform 8.x renamed its Control Center image
+to `cp-enterprise-control-center-next-gen` (the classic name doesn't exist
+past CP 7.9.x); and Flink's transactional Kafka sink needs
+`transaction.max.timeout.ms` raised above the broker default — a gap even
+Confluent's own official single-node reference manifest doesn't cover.
+
+## Try it yourself
+
+The [repo](https://github.com/ohad-israeli/managed-flink-sql-demo) has the
+whole thing: the CFK manifests for a real Confluent Platform deployment, the
+CMF/Operator install, all six SQL statements as separate ordered files
+(`sql/01_create_clicks.sql` through `sql/06_customer_click_enrichment.sql`),
+and `scripts/demo.sh start|stop` — a single script that brings the whole
+stack up (or pauses it) on demand, including the port-forwards, tested
+through a full cold restart with the enrichment job resuming correctly on
+its own. See the repo's README for the exact commands.
+
+Full manifests, SQL, and scripts are in the
+[repo](https://github.com/ohad-israeli/managed-flink-sql-demo).

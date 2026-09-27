@@ -1,0 +1,62 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="managed-flink-sql-demo" id="managed-flink-sql-demo-diagram">
+    <mxGraphModel dx="1300" dy="650" grid="1" gridSize="10" guides="1" tooltips="1"
+        connect="1" arrows="1" fold="1" page="1" pageScale="1"
+        pageWidth="1220" pageHeight="620" math="0" shadow="0" background="#0d1117">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="Enterprise Flink SQL, Managed Through CMF" style="text;html=1;fontColor=#e6edf3;fontSize=19;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="360" y="12" width="500" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="One minikube instance on an existing box -- no new cloud infrastructure" style="text;html=1;fontColor=#9da7b3;fontSize=12.5;align=center;" vertex="1" parent="1">
+          <mxGeometry x="310" y="38" width="600" height="18" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="minikube" value="minikube (single Kubernetes node, on an existing GCP VM)" style="rounded=1;dashed=1;dashPattern=7 5;strokeColor=#57606a;fillColor=none;fontColor=#9da7b3;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=16;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="30" y="90" width="1160" height="410" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="flinkzone" value="namespace: flink-sql-demo" style="rounded=1;strokeColor=#ffb454;fillColor=#161b22;fontColor=#ffb454;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=16;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="140" width="480" height="340" as="geometry"/>
+        </mxCell>
+        <mxCell id="cmf" value="Confluent Manager for Apache Flink&#10;Environments - Statements - Compute Pools" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="184" width="440" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="operator" value="Flink Kubernetes Operator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="260" width="440" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="job" value="customer-click-enrichment&#10;running - no custom JAR, plain Flink SQL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#3fb950;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="326" width="440" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="pool" value="compute pool: sql-demo-pool" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#9da7b3;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="80" y="402" width="440" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="cpzone" value="namespace: confluent (real Confluent Platform, via CFK)" style="rounded=1;strokeColor=#388bfd;fillColor=#161b22;fontColor=#388bfd;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=16;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="680" y="140" width="480" height="340" as="geometry"/>
+        </mxCell>
+        <mxCell id="kafka" value="Kafka (KRaft, single broker)&#10;clicks - customers - customer_click_activity" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="700" y="184" width="440" height="56" as="geometry"/>
+        </mxCell>
+        <mxCell id="sr" value="Schema Registry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="700" y="256" width="440" height="46" as="geometry"/>
+        </mxCell>
+        <mxCell id="c3" value="Control Center&#10;topic browser - live message viewer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#e6edf3;fontSize=11;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="700" y="318" width="440" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="cfknote" value="deployed via Confluent for Kubernetes (CFK)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0d1117;strokeColor=#57606a;fontColor=#9da7b3;fontSize=10;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="700" y="394" width="440" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="caption" value="Three UIs, reached from a Mac browser over one SSH tunnel to the VM: CMF (statement lifecycle), the native Flink job dashboard (job graph, checkpoints), and Control Center (Kafka topics, live messages) -- three separate surfaces, not one merged screen." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#161b22;strokeColor=#57606a;fontColor=#9da7b3;fontSize=10.5;align=left;spacingLeft=12;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="504" width="1100" height="66" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" value="reads" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#3fb950;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" source="job" target="kafka" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="writes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#388bfd;endArrow=block;html=1;fontColor=#9da7b3;fontSize=9;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" source="kafka" target="job" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
