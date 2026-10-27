@@ -1,0 +1,142 @@
+---
+title: "Schema-Tagging Native Protobuf from Azure Event Hubs"
+description: "A fully managed Azure Event Hubs Source connector ingests raw, non-Confluent Protobuf from industrial sensors — a custom SMT schema-tags and routes each record into Confluent Cloud, no producer changes."
+date: 2026-10-27
+tags: ["azure-event-hubs", "protobuf", "schema-registry", "confluent-cloud", "kafka-connect", "iot"]
+repo: "https://github.com/ohad-israeli/eventhub-protobuf-schema-id"
+status: "active"
+draft: false
+---
+
+## What this repo demonstrates
+
+Industrial equipment — temperature, vibration, and pressure sensors — publishes
+sensor readings as native Protobuf bytes directly to Azure Event Hubs: just
+`SerializeToString()`, no Confluent client, no Confluent wire format. The fully
+managed **Azure Event Hubs Source** connector in Confluent Cloud ingests those
+events, and a custom Single Message Transform schema-tags each record with its
+registered Protobuf schema ID and routes it to the matching Kafka topic — based
+entirely on what the producer declares per message. One Event Hub, three event
+types, three topics come out the other end, each independently schema-resolved in
+Confluent Cloud, with the original payload bytes preserved exactly.
+
+<figure>
+  <img
+    src="/diagrams/eventhub-protobuf-schema-id.svg"
+    alt="Industrial equipment publishes raw Protobuf directly to Azure Event Hubs. A custom SMT on Confluent Cloud's Azure Event Hubs Source connector schema-tags each record by embedding its Protobuf schema ID directly in the payload, and routes it to the matching topic, making a native non-Confluent producer fully schema-registry compatible with no producer-side changes. Downstream Snowflake analytics is architecture context only, not implemented here."
+  />
+  <figcaption>
+    Raw Protobuf in, schema-tagged and routed Kafka topics out. Editable source:{' '}
+    <a href="/diagrams/eventhub-protobuf-schema-id.drawio" download>eventhub-protobuf-schema-id.drawio</a>.
+  </figcaption>
+</figure>
+
+## Why this matters
+
+Industrial sensors speak whatever their firmware shipped with — rewriting a fleet
+of deployed devices to use a Confluent client isn't on the table. But the data
+still needs to be governed once it lands: resolvable against a registered schema,
+safely evolvable, consumable by every downstream system that expects Confluent's
+schema conventions — in this case, a Snowflake-fed analytics layer watching for
+early signs of equipment failure. Without schema tagging, that stream is just
+opaque bytes with no contract behind it.
+
+A custom SMT running on the fully managed connector closes that gap entirely on
+the ingestion side. The equipment keeps publishing exactly what it always has;
+Confluent Cloud still gets the full schema story, with each of the three sensor
+types routed to its own topic and its own independently evolvable schema.
+
+## The plan, and what actually worked
+
+The original plan was to use Confluent's newer [schema IDs in Kafka
+headers](https://www.confluent.io/blog/schema-id-kafka-headers-data-governance/)
+feature — attach the schema ID to a `__value_schema_id` header so the payload
+bytes stay completely untouched. That turned out not to be viable through this
+connector's custom-SMT execution path: a binary header value doesn't survive the
+round trip intact, no matter how it's typed. We reported this to Confluent and
+pivoted to the mechanism this repo actually ships: the SMT writes the schema ID
+directly into the record's **value**, using Confluent's standard wire format —
+the long-established, reliable way a schema ID travels with a message.
+
+## The key idea
+
+The SMT reads a `schema_subject` declaration the producer attaches as a plain
+Event Hub property, resolves it to a schema ID via a static map (populated once,
+offline — a registered schema version's ID never changes), and rewrites the
+value:
+
+```java
+byte[] original = (byte[]) record.value();
+byte[] wrapped = ByteBuffer.allocate(1 + 4 + 1 + original.length)
+        .put((byte) 0x00)        // magic byte
+        .putInt(schemaId)        // 4-byte numeric schema ID
+        .put((byte) 0x00)        // Protobuf message-index (single top-level message)
+        .put(original)           // untouched original payload
+        .array();
+```
+
+Same transform also reroutes the record to the topic matching its declared
+subject (`<topic>-value` → `<topic>`), so one Event Hub fans out to as many
+topics and schemas as there are event types — adding a new one is a config
+change, not new code.
+
+## What was verified
+
+Real sensor readings, through the real connector, decoded correctly in Confluent
+Cloud's Topic viewer — "Schema associated," full field decode, no warnings:
+
+```json
+{
+  "equipment_id": "compressor-02",
+  "equipment_type": "compressor",
+  "value": 63.46,
+  "unit": "C",
+  "timestamp_ms": "1793054595166",
+  "site": "plant-a-line-1"
+}
+```
+
+Confirmed across all three topics: `iot.temperature-readings` (schema ID
+`100002`), `iot.vibration-readings` (`100003`), and `iot.pressure-readings`
+(`100004`) — each message landing with the correct magic byte, the correct
+4-byte schema ID, and a byte-for-byte intact payload.
+
+## What didn't work, and the gotcha that cost the most time
+
+`AzureEventHubsSource` crashes any attached custom SMT — but only on records
+whose Event Hub message has no `partition_key` set. The connector's custom-SMT
+execution path serializes each record through an internal schema-aware converter
+before handing it to the transform; that converter has a required field with no
+default that's null whenever `partition_key` is unset, and the whole task dies
+with a generic "contact Support" error that gives no indication this is the
+cause.
+
+This was reproduced and isolated cleanly: the identical SMT jar works without
+modification on other connector types processing the same Protobuf bytes, and on
+a self-managed Kafka Connect worker against the same cluster. It only fails on
+`AzureEventHubsSource`, and only for unkeyed messages. **The fix: always set a
+`partition_key` on every Event Hub message**, even if nothing else needs it.
+
+## Try it yourself
+
+The [repo](https://github.com/ohad-israeli/eventhub-protobuf-schema-id) has the
+producer (three distinct Protobuf schemas, sent as native bytes), the custom SMT
+(Java/Maven), the connector config, and the Terraform for the Confluent Cloud
+side:
+
+```bash
+# Compile schemas, register them, build + upload the SMT
+scripts/generate_proto.sh
+scripts/register_schema.sh
+cd smt && mvn package && cd ..
+confluent connect artifact create schema-id-value-prefix-smt \
+  --artifact-file smt/target/schema-id-value-prefix-smt-1.0.0.jar \
+  --cloud azure --environment <env-id>
+
+# Deploy the connector, then produce
+scripts/create_connector.sh
+python3 producer/produce.py --count 50
+```
+
+Full code, configs, and the Java SMT are in the
+[repo](https://github.com/ohad-israeli/eventhub-protobuf-schema-id).

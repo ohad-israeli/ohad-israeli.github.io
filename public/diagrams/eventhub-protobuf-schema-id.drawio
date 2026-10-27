@@ -1,0 +1,119 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="eventhub-protobuf-schema-id">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1450" pageHeight="660" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="Native Protobuf from Azure Event Hubs, schema-tagged into Confluent Cloud" style="text;html=1;align=center;fontStyle=1;fontSize=19;fontColor=#14181c;" vertex="1" parent="1">
+          <mxGeometry x="300" y="10" width="850" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- Zone: Industrial Equipment -->
+        <mxCell id="zoneEquip" value="Industrial Equipment" style="rounded=1;strokeColor=#bf6a02;fillColor=none;fontColor=#bf6a02;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=12;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="20" y="170" width="210" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="equipBox" value="Temperature / Vibration / Pressure sensors&#10;Raw Protobuf, no Confluent client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#bf6a02;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="260" width="170" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- Zone: Azure -->
+        <mxCell id="zoneAzure" value="Azure" style="rounded=1;strokeColor=#1f6feb;fillColor=none;fontColor=#1f6feb;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=36;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="270" y="170" width="230" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="azureBadge" style="shape=image;html=1;image=https://upload.wikimedia.org/wikipedia/commons/f/fa/Microsoft_Azure.svg;" vertex="1" parent="1">
+          <mxGeometry x="284" y="182" width="18" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="eventHubBox" value="Event Hub: sensor-readings&#10;AMQP, native Protobuf bytes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1f6feb;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="290" y="260" width="190" height="150" as="geometry"/>
+        </mxCell>
+
+        <!-- Zone: Confluent Cloud -->
+        <mxCell id="zoneConfluent" value="Confluent Cloud" style="rounded=1;strokeColor=#1f6feb;fillColor=none;fontColor=#1f6feb;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=70;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="550" y="60" width="640" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="confluentBadge" style="shape=image;html=1;image=https://upload.wikimedia.org/wikipedia/commons/a/ab/Confluent%2C_Inc._logo.svg;" vertex="1" parent="1">
+          <mxGeometry x="572" y="74" width="52" height="11" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="connectorBox" value="Azure Event Hubs Source connector&#10;fully managed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1f6feb;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="580" y="130" width="230" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="smtBox" value="Custom SMT&#10;wraps payload in Confluent wire format + routes topic" style="rounded=1;dashed=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#57606a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="580" y="260" width="230" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="srBox" value="Schema Registry&#10;3 Protobuf schemas, one ID baked in per topic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1f6feb;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="580" y="470" width="230" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="topicTemp" value="iot.temperature-readings&#10;schema id 100002" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1f6feb;fontSize=11;align=left;spacingLeft=36;" vertex="1" parent="1">
+          <mxGeometry x="870" y="100" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="topicTempIcon" style="shape=image;html=1;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;" vertex="1" parent="1">
+          <mxGeometry x="886" y="128" width="24" height="24" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="topicVib" value="iot.vibration-readings&#10;schema id 100003" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1f6feb;fontSize=11;align=left;spacingLeft=36;" vertex="1" parent="1">
+          <mxGeometry x="870" y="200" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="topicVibIcon" style="shape=image;html=1;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;" vertex="1" parent="1">
+          <mxGeometry x="886" y="228" width="24" height="24" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="topicPres" value="iot.pressure-readings&#10;schema id 100004" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1f6feb;fontSize=11;align=left;spacingLeft=36;" vertex="1" parent="1">
+          <mxGeometry x="870" y="300" width="280" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="topicPresIcon" style="shape=image;html=1;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/apachekafka.svg;" vertex="1" parent="1">
+          <mxGeometry x="886" y="328" width="24" height="24" as="geometry"/>
+        </mxCell>
+
+        <!-- Zone: Snowflake (not implemented) -->
+        <mxCell id="zoneSnowflake" value="Snowflake" style="rounded=1;dashed=1;dashPattern=7 5;strokeColor=#29B5E8;fillColor=none;fontColor=#29B5E8;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=12;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="170" width="170" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="snowflakeBox" value="Downstream analytics&#10;architecture context -- not built here" style="rounded=1;dashed=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#29B5E8;fontSize=10.5;" vertex="1" parent="1">
+          <mxGeometry x="1265" y="270" width="140" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="snowflakeIcon" style="shape=image;html=1;image=https://raw.githubusercontent.com/simple-icons/simple-icons/master/icons/snowflake.svg;" vertex="1" parent="1">
+          <mxGeometry x="1317" y="290" width="36" height="36" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="edge1" value="raw Protobuf" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#1a7f37;endArrow=block;html=1;fontColor=#1a7f37;fontSize=9.5;" edge="1" parent="1" source="equipBox" target="eventHubBox">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge2" value="AMQP" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#1a7f37;endArrow=block;html=1;fontColor=#1a7f37;fontSize=9.5;" edge="1" parent="1" source="eventHubBox" target="connectorBox">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#57606a;endArrow=block;html=1;" edge="1" parent="1" source="connectorBox" target="smtBox">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge4" value="routed by declared subject" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#57606a;endArrow=block;html=1;fontColor=#57606a;fontSize=9;" edge="1" parent="1" source="smtBox" target="topicTemp">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#57606a;endArrow=block;html=1;" edge="1" parent="1" source="smtBox" target="topicVib">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#57606a;endArrow=block;html=1;" edge="1" parent="1" source="smtBox" target="topicPres">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge7" value="IDs baked in offline, no live call" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#57606a;endArrow=block;html=1;fontColor=#57606a;fontSize=9;" edge="1" parent="1" source="srBox" target="smtBox">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#9da7b3;endArrow=none;html=1;" edge="1" parent="1" source="topicTemp" target="snowflakeBox">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#9da7b3;endArrow=none;html=1;" edge="1" parent="1" source="topicVib" target="snowflakeBox">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="edge10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#9da7b3;endArrow=block;html=1;" edge="1" parent="1" source="topicPres" target="snowflakeBox">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="caption" value="A custom SMT schema-tags each record by embedding its Protobuf schema ID directly in the payload (not a header) and routes it to the matching topic -- no changes to the producer." style="text;html=1;align=center;fontColor=#57606a;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="300" y="625" width="850" height="20" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
