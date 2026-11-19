@@ -1,6 +1,6 @@
 ---
 title: "Stop Running Your Cloud on Yesterday's Data"
-description: "Analytics, migration and disaster recovery all depend on a live copy of your core database. Here's how to build one from on-prem SQL Server, with zero load on production and no custom code."
+description: "Analytics, migration and disaster recovery all depend on a live copy of your core database. Here's how to build one from on-prem SQL Server, without polling your production tables and with no custom code."
 date: 2026-06-05
 tags: ["debezium", "kafka", "confluent-cloud", "cdc", "sql-server", "aws"]
 repo: "https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink"
@@ -34,7 +34,7 @@ The requirements are firm. The copy must stay current in near real time, add **n
 
 ## The approach
 
-Change Data Capture reads each change from SQL Server's transaction log, so production isn't queried or slowed. **Debezium** publishes those changes to **Confluent Cloud** (managed Kafka and Schema Registry), and the **Debezium JDBC sink** writes them into **Amazon RDS for SQL Server**. It's all configuration, with no pipeline code.
+SQL Server's built-in Change Data Capture records each change as it happens, so nothing has to poll your production tables. **Debezium** publishes those changes to **Confluent Cloud** (managed Kafka and Schema Registry), and the **Debezium JDBC sink** writes them into **Amazon RDS for SQL Server**. It's all configuration, with no pipeline code.
 
 <figure>
   <img
