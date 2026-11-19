@@ -1,6 +1,6 @@
 ---
-title: "Replicating SQL Server to AWS RDS with Debezium on Confluent Cloud"
-description: "Near-real-time replication from an on-premises SQL Server to Amazon RDS for SQL Server using Debezium CDC on Confluent Cloud and the JDBC sink — identity keys and all, no custom connector."
+title: "Keeping On-Prem SQL Server and the Cloud in Sync, Keys and All"
+description: "A live, exact copy of an on-premises SQL Server in Amazon RDS using Debezium CDC and Confluent Cloud — identity keys included, no custom connector."
 date: 2026-06-05
 tags: ["debezium", "kafka", "confluent-cloud", "cdc", "sql-server", "aws"]
 repo: "https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink"
@@ -8,106 +8,62 @@ status: "active"
 draft: false
 ---
 
-## The business problem
+<figure>
+  <img
+    src="/diagrams/debezium-linkedin-hero.svg"
+    alt="Same data. Everywhere. Always current. An on-premises SQL Server feeds a live stream on Confluent Cloud, which keeps a copy in Amazon RDS for SQL Server, serving analytics, cloud migration and disaster recovery."
+  />
+</figure>
 
-A company runs its core transactional system on an **on-premises SQL Server** and
-needs a continuously updated copy in **Amazon RDS for SQL Server** — to power cloud
-analytics and reporting, support a phased migration to the cloud, and keep a warm
-disaster-recovery replica. That copy has to stay current in **near-real-time**, put
-**no downtime or load on the production source**, and reproduce the data **exactly** —
-right down to the `IDENTITY` primary keys that downstream systems rely on.
+## The business need
 
-The shape of the solution: **Debezium** captures every change from the on-prem SQL
-Server via CDC and streams it through **Confluent Cloud** — managed Kafka and Schema
-Registry, with the Confluent Cloud Console as the UI — and the **Debezium JDBC sink**
-writes those changes into RDS over **AWS Direct Connect**, preserving the identity
-values natively, with no custom code.
+Picture a company whose core transactional system runs on an on-premises SQL Server. The business wants that data in the cloud, **continuously**, for three reasons:
+
+- **Analytics and reporting** that run on fresh data, not last night's batch.
+- A **phased migration** to the cloud, with old and new running side by side.
+- A **warm disaster-recovery replica** that is ready when it's needed.
+
+The requirements are firm. The copy must stay current in near real time, add **no downtime or load to production**, and match the source **exactly**, down to the `IDENTITY` primary keys that downstream systems rely on.
+
+## Who this helps
+
+- Teams planning a **SQL Server to cloud migration** that can't afford a cutover weekend.
+- **Data and analytics owners** who need a trustworthy, current copy outside production.
+- **Resilience and DR leads** who want a warm replica without bespoke scripts.
+- **Platform engineers** who would rather run configuration than maintain a custom sync tool.
+
+## The approach
+
+Change Data Capture reads each change from SQL Server's transaction log, so production isn't queried or slowed. **Debezium** publishes those changes to **Confluent Cloud** (managed Kafka and Schema Registry), and the **Debezium JDBC sink** writes them into **Amazon RDS for SQL Server**. It's all configuration, with no pipeline code.
 
 <figure>
   <img
     src="/diagrams/debezium-onprem-to-rds.svg"
-    alt="On-premises SQL Server captured by a Debezium CDC source on a self-managed Kafka Connect worker, streamed through Confluent Cloud (Kafka + Schema Registry), then written by the Debezium JDBC sink to Amazon RDS for SQL Server over AWS Direct Connect."
+    alt="On-premises SQL Server captured by a Debezium CDC source on Kafka Connect, streamed through Confluent Cloud (Kafka + Schema Registry), then written by the Debezium JDBC sink to Amazon RDS for SQL Server over AWS Direct Connect."
   />
   <figcaption>
-    On-prem SQL Server → Debezium CDC → Confluent Cloud (Kafka + Schema Registry) →
-    Debezium JDBC sink → Amazon RDS. Editable source:
-    <a href="/diagrams/debezium-onprem-to-rds.drawio" download>debezium-onprem-to-rds.drawio</a>.
+    On-prem SQL Server → Debezium CDC → Confluent Cloud → Debezium JDBC sink → Amazon RDS.
+    Editable source: <a href="/diagrams/debezium-onprem-to-rds.drawio" download>debezium-onprem-to-rds.drawio</a>.
   </figcaption>
 </figure>
 
-## Try it yourself
+## The challenge, and what we discovered
 
-The [repo](https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink) is a
-runnable version of this architecture. Kafka, Schema Registry, and the UI are real
-**Confluent Cloud**; the only things that run locally (via `docker compose`) are the
-self-managed **Kafka Connect** worker hosting the two Debezium connectors, and **two
-SQL Server containers** that stand in for the on-prem source and the RDS target — so
-you can exercise the whole pipeline from a laptop. Pointing it at a real on-prem
-database and an RDS endpoint later is mostly connection strings.
+Replicating rows is the easy part. Replicating **identity keys** is where it quietly goes wrong.
 
-The source table is seeded with deliberately non-contiguous identity values
-(`1, 11, 21, 31, 41`) so it's obvious whether the *exact* keys survived the trip
-rather than getting renumbered by the target.
+SQL Server normally generates identity values itself. Point a standard sink at the target and it re-numbers every row, so source and target IDs drift apart without any error. For a system whose downstream consumers join on those IDs, that is silent data corruption.
 
-## The key piece
+The fix turned out to be two settings, and the second is easy to miss:
 
-Two settings in the sink config carry the whole thing — the identity-insert dialect
-flag, and a `replication=true` on the JDBC connection URL:
+1. **`dialect.sqlserver.identity.insert=true`** on the Debezium JDBC sink, which inserts the source's identity values verbatim instead of generating new ones. This needs connector version 3.0.7 or newer.
+2. **`replication=true`** on the sink's connection URL. When the key is declared `NOT FOR REPLICATION`, SQL Server honors an explicit identity value only if the connection identifies itself as a replication connection. Without the flag, it silently ignores the value you send.
 
-```json
-{
-  "connector.class": "io.debezium.connector.jdbc.JdbcSinkConnector",
-  "connection.url": "jdbc:sqlserver://<target-host>:1433;databaseName=TargetDB;encrypt=false;trustServerCertificate=true;replication=true",
-  "topics": "sqlserver_source.SourceDB.dbo.TBL_AG_TEST4",
-  "insert.mode": "upsert",
-  "delete.enabled": "true",
-  "primary.key.mode": "record_key",
-  "primary.key.fields": "col1",
-  "table.name.format": "TBL_AG_TEST4",
-  "dialect.sqlserver.identity.insert": "true"
-}
-```
+To prove it, we seeded the source with deliberately non-contiguous keys (`1, 11, 21, 31, 41`). They landed in the target unchanged.
 
-`dialect.sqlserver.identity.insert: true` makes the sink wrap each write batch in
-`SET IDENTITY_INSERT <table> ON` / `OFF`, so the source's identity values are
-inserted verbatim instead of being re-generated. This needs the Debezium JDBC
-connector **v3.0.7 or newer**.
+## Summary
 
-The catch that's easy to miss is the **`;replication=true`** on the connection URL.
-The primary key is declared `IDENTITY(1,10) NOT FOR REPLICATION`, and SQL Server
-only honors an explicitly-inserted identity value for a `NOT FOR REPLICATION` column
-when the connection identifies itself as a replication connection. Leave the flag
-off and SQL Server quietly ignores the value you send and assigns its own — so the
-keys silently drift out of sync between source and target. With it, the exact source
-keys land in the target.
+- **Continuous, exact replication** from on-prem SQL Server to the cloud is achievable with off-the-shelf Debezium connectors and Confluent Cloud.
+- **Identity keys** used to force a custom sink. Now they take one dialect flag and one connection-string setting.
+- The same stream can feed analytics, a migration, and a DR replica without touching production.
 
-## Running it
-
-```bash
-git clone https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink
-cd debezium-jdbc-sqlserver-sink
-cp .env.example .env      # fill in your Confluent Cloud bootstrap + API keys
-./scripts/up.sh
-```
-
-`up.sh` first runs a **preflight** that validates `.env` and checks that it can
-reach Confluent Cloud (Schema Registry auth + broker connectivity), then brings up
-Connect and the two SQL Servers, seeds the source, registers both connectors, and
-prints the source vs. target rows. After it settles, the target holds the same five
-rows with the same `col1` values. Insert another row on the source and re-run
-`scripts/verify.sh` to watch it flow through; inspect the topics and schemas in the
-Confluent Cloud Console.
-
-> You'll need a Confluent Cloud cluster with Schema Registry enabled, and ~6 GB of
-> RAM free for the two SQL Server containers plus Connect.
-
-## Why it matters
-
-On-prem-to-cloud database replication is usually where teams reach for a managed
-service or a pile of bespoke scripts. Debezium CDC into the Debezium JDBC sink, with
-the streaming backbone on Confluent Cloud, is a clean path that handles it as a
-stream — and SQL Server identity columns, which used to force you onto a custom sink
-connector, are now a single config flag. That makes the off-the-shelf connectors a
-viable answer for a lot more replication and migration jobs.
-
-Full code, configs, and SQL are in the [repo](https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink).
+Full configuration, SQL, and run instructions are in the [repo](https://github.com/ohad-israeli/debezium-jdbc-sqlserver-sink).
