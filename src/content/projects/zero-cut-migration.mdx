@@ -50,23 +50,26 @@ Clients connect to a **CPC Gateway** instead of to a broker. A **source-initiate
 
 Getting clients onto the Gateway is a calm prerequisite, done while the Gateway still routes straight to the source, so behavior is identical. Each team repoints on its own schedule. Handing clients a DNS name you control instead of a broker address makes even that step a single record change.
 
-## The challenge, and what we discovered
+## Things to pay attention to
 
-The catch is **DNS**. A private Confluent Cloud cluster publishes its broker addresses in public DNS, and those are Confluent's internal private IPs, which your VPC can't route to:
+**1. Private DNS for the Private Service Connect endpoints.** A private Confluent Cloud cluster publishes its broker addresses in public DNS, and those are Confluent's internal private IPs, which your VPC can't route to:
 
 ```text
 $ getent hosts lkc-xxxxxxx.<domain>.us-east1.gcp.confluent.cloud
 10.1.32.2   lkc-xxxxxxx...     # published broker IP, unreachable from your VPC
 ```
 
-A client resolves the bootstrap name to an address it can never reach, and the answer looks perfectly valid. The fix is a **private Cloud DNS zone** for the cluster's domain, with a wildcard record pointing at your **Private Service Connect endpoint IPs**. With that override in place, the bootstrap name and every broker hostname resolve to the endpoints. The source-initiated link then came up `ACTIVE` on both sides, and the mirror drained to zero lag with 190 messages replicated.
+A client resolves the bootstrap name to an address it can never reach, and the answer looks perfectly valid. The role of the private zone is to override that: create a **private Cloud DNS zone** for the cluster's domain, with a `*` record pointing at your PSC endpoint IPs, plus a per-zone wildcard for each endpoint. This is a documented step in Confluent's [Private Service Connect guide](https://docs.confluent.io/cloud/current/networking/private-links/gcp-private-service-connect.html), and the easiest one to miss. With it in place, the source-initiated link came up `ACTIVE` on both sides and the mirror drained to zero lag, with 190 messages replicated.
 
-In a separate run, the cutover sequence (drain lag, fence, promote topics, switch the Gateway upstream) completed end to end, and the topic became a normal writable topic on Confluent Cloud.
+**2. Link direction.** A normal Cluster Link has the destination dial the source, which doesn't work when the source sits in a private network with no inbound path. The role of **source-initiated** mode is to flip that: the only connection is the source reaching *out* to Confluent Cloud, the direction private networking allows.
+
+**3. Gateway first, cutover second.** The Gateway's role is to be the one address clients know. Move clients onto it while it still routes to the source, so there is nothing to coordinate on cutover day.
 
 ## Summary
 
 - **Clients address the Gateway, not a broker**, so only the Gateway's upstream changes at cutover.
 - **Source-initiated Cluster Linking** moves data and offsets in the one direction private networking permits.
 - **Private DNS is the step that gets missed.** Override resolution to your PSC endpoints and the rest follows.
+- **What we ran:** replication over PSC end to end, and in a separate run the full cutover (drain lag, fence, promote topics, switch the Gateway upstream), after which the topic was a normal writable topic on Confluent Cloud.
 
 Terraform, Gateway manifests, and the runbook are in the [repo](https://github.com/ohad-israeli/zero-cut-migration).

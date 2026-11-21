@@ -47,18 +47,14 @@ SQL Server's built-in Change Data Capture records each change as it happens, so 
   </figcaption>
 </figure>
 
-## The challenge, and what we discovered
+## Things to pay attention to
 
-Replicating rows is the easy part. Replicating **identity keys** is where it quietly goes wrong.
+Replicating rows is the easy part. Replicating **identity keys** is where it quietly goes wrong. SQL Server normally generates identity values itself, so a standard sink re-numbers every row and source and target IDs drift apart without any error. For a system whose downstream consumers join on those IDs, that is silent data corruption. Two settings on the sink prevent it:
 
-SQL Server normally generates identity values itself. Point a standard sink at the target and it re-numbers every row, so source and target IDs drift apart without any error. For a system whose downstream consumers join on those IDs, that is silent data corruption.
+1. **`dialect.sqlserver.identity.insert=true`.** Its role is to insert the source's identity values verbatim instead of letting SQL Server generate new ones. It needs Debezium JDBC connector version 3.0.7 or newer.
+2. **`replication=true` on the sink's connection URL.** When the key is declared `NOT FOR REPLICATION`, SQL Server honors an explicit identity value only on a connection that identifies itself as a replication connection. Its role is to make that so. Without it, SQL Server silently ignores the value you send.
 
-The fix turned out to be two settings, and the second is easy to miss:
-
-1. **`dialect.sqlserver.identity.insert=true`** on the Debezium JDBC sink, which inserts the source's identity values verbatim instead of generating new ones. This needs connector version 3.0.7 or newer.
-2. **`replication=true`** on the sink's connection URL. When the key is declared `NOT FOR REPLICATION`, SQL Server honors an explicit identity value only if the connection identifies itself as a replication connection. Without the flag, it silently ignores the value you send.
-
-To prove it, we seeded the source with deliberately non-contiguous keys (`1, 11, 21, 31, 41`). They landed in the target unchanged.
+To check, we seeded the source with deliberately non-contiguous keys (`1, 11, 21, 31, 41`). They landed in the target unchanged.
 
 ## Summary
 
