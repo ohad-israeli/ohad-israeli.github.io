@@ -1,5 +1,5 @@
 ---
-title: "Three SQL Statements for Secure Access to Your Private API"
+title: "Stop Writing Glue Code: Enrich Kafka Streams from Private APIs in Three SQL Statements"
 description: "A connection, an external table and a lookup: the three statements that let Confluent Cloud for Apache Flink call a private internal REST API for every event, over PrivateLink, with no pipeline code."
 date: 2026-07-04
 tags: ["confluent-cloud", "apache-flink", "flink-sql", "privatelink", "data-enrichment", "aws", "kafka"]
@@ -8,10 +8,16 @@ status: "active"
 draft: false
 ---
 
+Every real-time enrichment pipeline usually ends the same way: spinning up a custom consumer
+microservice just to call an internal REST API, handle retries, and write the result back to
+Kafka. With Confluent Cloud for Apache Flink and AWS Egress PrivateLink, you can delete that
+service entirely, querying private, internal endpoints per event using nothing but three SQL
+statements.
+
 This is the technical deep-dive behind
-[Your Event Stream Is Missing Half the Story](/projects/real-time-stream-enrichment). There
-we made the business case. Here is how it works: enriching an order stream, per event, with
-live data from a **private** Customer-360 API, using nothing but Flink SQL.
+[Your Event Stream Is Missing Half the Story](/projects/real-time-stream-enrichment), which
+makes the business case. Here is how it works, enriching an order stream with live data from a
+**private** Customer-360 API.
 
 ## The shape of it
 
