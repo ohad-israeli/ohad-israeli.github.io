@@ -8,12 +8,6 @@ status: "active"
 draft: false
 ---
 
-Every real-time enrichment pipeline usually ends the same way: spinning up a custom consumer
-microservice just to call an internal REST API, handle retries, and write the result back to
-Kafka. With Confluent Cloud for Apache Flink and AWS Egress PrivateLink, you can replace that
-service entirely, querying private, internal endpoints per event using nothing but three SQL
-statements.
-
 This is the technical deep-dive behind
 [Your Event Stream Is Missing Half the Story](/projects/real-time-stream-enrichment), which
 makes the business case. Here is how it works, enriching an order stream with live data from a
